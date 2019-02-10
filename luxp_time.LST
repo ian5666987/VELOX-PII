@@ -1,0 +1,685 @@
+C51 COMPILER V9.02   LUXP_TIME                                                             01/09/2014 12:21:22 PAGE 1   
+
+
+C51 COMPILER V9.02, COMPILATION OF MODULE LUXP_TIME
+NO OBJECT MODULE REQUESTED
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE luxp_time.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+*** WARNING C500 IN LINE 1 OF LUXP_TIME.C: LICENSE ERROR (R20D: CONTENT ERROR IN FLF FILE)
+
+   1          //------------------------------------------------------------------------------------
+   2          // Luxp_time.c
+   3          //------------------------------------------------------------------------------------
+   4          // Copyright (C) 2013 Nanyang Technological University.
+   5          //
+   6          // AUTH: IAN
+   7          // DATE: 03 APR 2013
+   8          //
+   9          // The program Luxp_time.c will be downloaded to the Pumpkin Motherboard with 
+  10          // C8051F120 uC as part of the VELOX-P Pico-Satellite Flight Software. 
+  11          //
+  12          // This file contains all basic time functions of the Flight Software.
+  13          //
+  14          //------------------------------------------------------------------------------------
+  15          // Overall functional test results
+  16          //------------------------------------------------------------------------------------
+  17          // Fully functional with warning(s)
+  18          //
+  19          //------------------------------------------------------------------------------------
+  20          // Overall documentation status
+  21          //------------------------------------------------------------------------------------
+  22          // Averagely documented
+  23          //------------------------------------------------------------------------------------
+  24          
+  25          //------------------------------------------------------------------------------------
+  26          // List of functions                            | Test result                                   | Documentation
+  27          //------------------------------------------------------------------------------------
+  28          // waitMs                                                       | Tested, fully functional (w)  | Average
+  29          // waitS                                                        | Tested, fully functional              | Mininum
+  30          // countNoOfDays                                        | Tested, fully functional              | Average
+  31          // getHMSInfo                                           | Tested, fully functional              | Average
+  32          // checkEndDayOfTheMonth                        | Tested, fully functional              | Average
+  33          // updateSatDate                                        | Tested, fully functional              | Mininum
+  34          // getSatTimeFromRTC                            | Tested, fully functional              | Average
+  35          // convertSatTimeFromRTCToSec           | Tested, fully functional              | Minimum
+  36          // getSatTimeFromRTCInSec                       | Tested, fully functional              | Minimum
+  37          // recordSatelliteTime                          | Tested, fully functional              | Mininum
+  38          // fastRecordTimerValue                         | Tested, fully functional              | Average
+  39          //------------------------------------------------------------------------------------
+  40          
+  41          #include <luxp_time.h>
+  42          
+  43          //------------------------------------------------------------------------------------
+  44          // Wait function using Timer0 in microsecond
+  45          //------------------------------------------------------------------------------------
+  46          // Function's test result: fully functional, with an indefinite while loop
+  47          //------------------------------------------------------------------------------------
+  48          void waitUs (unsigned char l_uc_us)
+  49          {
+  50   1              char SFRPAGE_SAVE = SFRPAGE;        //Save Current SFR page
+  51   1              unsigned long l_ul_val;
+  52   1              
+  53   1              l_ul_val = 0x00010000-((SYSCLK/1000000)*l_uc_us);
+  54   1      
+C51 COMPILER V9.02   LUXP_TIME                                                             01/09/2014 12:21:22 PAGE 2   
+
+  55   1              SFRPAGE = TIMER01_PAGE;
+  56   1      
+  57   1              TCON    &= ~0x30;                       //Stop Timer0; Clear TF0
+  58   1              TMOD    &= ~0x0f;                       //16-bit free run mode
+  59   1              TMOD    |=  0x01;
+  60   1              
+  61   1              CKCON   |= 0x08;                        //Timer0 counts SYSCLKs
+  62   1                                                                      //Not overlapping with Timer1
+  63   1                                                                      //which uses pre-scaled SYSCLK
+  64   1      
+  65   1              //!!----Warning----!!
+  66   1              //an indefinite while loop      
+  67   1              //With PLL
+  68   1              g_uc_spit0ad0_flag |= TIMER0_FLAG_WAIT;
+  69   1              TR0 = 0;                                                        //Stop Timer0
+  70   1              TH0 = l_ul_val >> 8;                                            //Overflow in 1us
+  71   1              TL0 = l_ul_val;
+  72   1              TF0 = 0;                                                                        //Clear overflow indicator
+  73   1              TR0 = 1;                                                                        //Start Timer0
+  74   1              while (!TF0 && !(g_uc_spit0ad0_flag & TIMER0_FLAG_WAIT_TIMEOUT));       //Wait for overflow
+  75   1              g_uc_spit0ad0_flag &= ~TIMER0_FLAG_WAIT_TIMEOUT;
+  76   1              g_uc_spit0ad0_flag &= ~TIMER0_FLAG_WAIT;
+  77   1              
+  78   1              TR0     = 0;                                            //Stop Timer0
+  79   1              
+  80   1              SFRPAGE = SFRPAGE_SAVE;                         //Restore SFR page detector
+  81   1      }
+  82          
+  83          //------------------------------------------------------------------------------------
+  84          // Wait function using Timer0 in tenth milisecond
+  85          //------------------------------------------------------------------------------------
+  86          // Function's test result: fully functional, with an indefinite while loop
+  87          //------------------------------------------------------------------------------------
+  88          void waitTenthMs (unsigned char l_uc_a_tenth_ms)
+  89          {
+  90   1              char SFRPAGE_SAVE = SFRPAGE;        //Save Current SFR page
+  91   1              unsigned long l_ul_val;
+  92   1      
+  93   1              //The value 100 is a constant for the other codes processing, obtain from experiment
+  94   1              l_ul_val = 0x00010000-(SYSCLK/10000-100);
+  95   1              
+  96   1              SFRPAGE = TIMER01_PAGE;
+  97   1      
+  98   1              TCON    &= ~0x30;                                       //Stop Timer0; Clear TF0
+  99   1              TMOD    &= ~0x0f;                                       //16-bit free run mode
+ 100   1              TMOD    |=  0x01;
+ 101   1              
+ 102   1              CKCON   |= 0x08;                                        //Timer0 counts SYSCLKs
+ 103   1                                                                                      //Not overlapping with Timer1
+ 104   1                                                                                      //which uses pre-scaled SYSCLK
+ 105   1      
+ 106   1              //!!----Warning----!!
+ 107   1              //an indefinite while loop      
+ 108   1              //With PLL
+ 109   1              while (l_uc_a_tenth_ms) {
+ 110   2                      g_uc_spit0ad0_flag |= TIMER0_FLAG_WAIT;
+ 111   2                      TR0 = 0;                                                //Stop Timer0
+ 112   2                      TH0 = l_ul_val >> 8;                                            //Overflow in 0.1ms
+ 113   2                      TL0 = l_ul_val;
+ 114   2                      TF0 = 0;                                                                        //Clear overflow indicator
+ 115   2                      TR0 = 1;                                                                        //Start Timer0
+ 116   2                      while (!TF0 && !(g_uc_spit0ad0_flag & TIMER0_FLAG_WAIT_TIMEOUT));       //Wait for overflow
+C51 COMPILER V9.02   LUXP_TIME                                                             01/09/2014 12:21:22 PAGE 3   
+
+ 117   2                      g_uc_spit0ad0_flag &= ~TIMER0_FLAG_WAIT_TIMEOUT;
+ 118   2                      g_uc_spit0ad0_flag &= ~TIMER0_FLAG_WAIT;
+ 119   2                      g_uc_timer0_stuck_counter = 0;
+ 120   2                      l_uc_a_tenth_ms--;                                                      //Update ms counter
+ 121   2              }
+ 122   1              
+ 123   1              TR0     = 0;                                            //Stop Timer0
+ 124   1              
+ 125   1              SFRPAGE = SFRPAGE_SAVE;                         //Restore SFR page detector
+ 126   1      }
+ 127          
+ 128          //------------------------------------------------------------------------------------
+ 129          // Wait function using Timer0 in milisecond
+ 130          //------------------------------------------------------------------------------------
+ 131          // Function's test result: fully functional, with an indefinite while loop
+ 132          //------------------------------------------------------------------------------------
+ 133          void waitMs (unsigned char l_uc_milisecond)
+ 134          {
+ 135   1              while (l_uc_milisecond){
+ 136   2                      waitTenthMs(10);
+ 137   2                      l_uc_milisecond--;
+ 138   2              }
+ 139   1      }
+ 140          
+ 141          //------------------------------------------------------------------------------------
+ 142          // Wait function using Timer0 in second
+ 143          //------------------------------------------------------------------------------------
+ 144          // Function's test result: fully functional
+ 145          //------------------------------------------------------------------------------------
+ 146          void waitS (unsigned char l_uc_s)
+ 147          {
+ 148   1              while(l_uc_s){
+ 149   2                      waitMs(250);
+ 150   2                      waitMs(250);
+ 151   2                      waitMs(250);
+ 152   2                      waitMs(249);
+ 153   2                      l_uc_s--;
+ 154   2              }
+ 155   1      }
+ 156          
+ 157          #if (TIME_ENABLE == 1)
+ 158          #if (RTC_CMD_ENABLE == 1)
+ 159          #if (UPDATE_HANDLER_ENABLE == 1)
+ 160          //------------------------------------------------------------------------------------
+ 161          // Calculate number of days between two dates
+ 162          //------------------------------------------------------------------------------------
+ 163          // Function's test result: fully functional
+ 164          //------------------------------------------------------------------------------------
+ 165          unsigned short countNoOfDays (void)
+ 166          {
+ 167   1              unsigned short  l_us_no_of_days                         = 0x0000;
+ 168   1              unsigned char   l_uc_temp_year                          = 0x00;
+ 169   1              unsigned char   l_uc_temp_month                         = 0x00;
+ 170   1              unsigned char   l_uc_last_day_to_count          = 0x00;
+ 171   1              unsigned char   l_uc_initial_day_to_count       = 0x00;
+ 172   1              unsigned char   l_uc_last_month_to_count        = 0x00;
+ 173   1              unsigned char   l_uc_initial_month_to_count = 0x00;
+ 174   1              
+ 175   1              //Initialize l_uc_temp_year value to be the same as satellite initial year
+ 176   1              //Redundant assignment is removed
+ 177   1              //l_uc_temp_year = str_sat_date.uc_init_year;                   
+ 178   1                      
+C51 COMPILER V9.02   LUXP_TIME                                                             01/09/2014 12:21:22 PAGE 4   
+
+ 179   1              //so long as the satellite's current year is greater or equal to l_uc_temp_year variable value
+ 180   1              for (l_uc_temp_year = str_sat_date.uc_init_year; l_uc_temp_year <= str_sat_date.uc_current_year; l_uc_tem
+             -p_year++) 
+ 181   1              {
+ 182   2                      //Calculate initial month to count
+ 183   2                      if (l_uc_temp_year == str_sat_date.uc_init_year)                                //If we are currently counting the days passed for t
+             -he very first year
+ 184   2                              l_uc_initial_month_to_count = str_sat_date.uc_init_month;       //The initial month taken for counting is the
+             - same as satellite's initial month
+ 185   2                      else                                                                                                                            //Otherwise
+ 186   2                              l_uc_initial_month_to_count = 1;                                                                //The initial month taken for counting is assigned as one
+ 187   2      
+ 188   2                      //Calculate last month to count
+ 189   2                      if (l_uc_temp_year == str_sat_date.uc_current_year)                     //If we are currently counting the days passed for
+             - the very last year
+ 190   2                              l_uc_last_month_to_count = str_sat_date.uc_current_month;       //The last month taken for counting is the sa
+             -me as satellite's current month
+ 191   2                      else                                                                                                                            //Otherwise
+ 192   2                              l_uc_last_month_to_count = 0x0C;                                                                //The last month taken is assigned as twelve
+ 193   2      
+ 194   2                      l_uc_temp_month = l_uc_initial_month_to_count;                                          //Assign initial month taken for calculation to the 
+             -l_uc_temp_month variable
+ 195   2      
+ 196   2                      //so long as the satellite's last month to count is greater than l_uc_temp_month variable value
+ 197   2                      for (l_uc_temp_month = l_uc_initial_month_to_count; l_uc_temp_month <= l_uc_last_month_to_count; l_uc_te
+             -mp_month++)
+ 198   2                      {                               
+ 199   3                              //Calculate initial day to count
+ 200   3                              if ((l_uc_temp_month == str_sat_date.uc_init_month) && (l_uc_temp_year == str_sat_date.uc_init_year))   /
+             -/If we are currently counting the days passed for the very first month
+ 201   3                                      l_uc_initial_day_to_count = str_sat_date.uc_init_day_of_month;  //The initial day taken for counting is
+             - the same as satellite's initial day
+ 202   3                              else                                                                                                                                            //Otherwise
+ 203   3                                      l_uc_initial_day_to_count = 0x01;                                                                               //The initial day taken for counting is assigned as one
+ 204   3                              
+ 205   3                              //Calculate last day to count
+ 206   3                              if ((l_uc_temp_month == str_sat_date.uc_current_month) && (l_uc_temp_year == str_sat_date.uc_current_ye
+             -ar))        //If we are currently counting the days passed for the very last month
+ 207   3                                      l_uc_last_day_to_count = str_sat_date.uc_current_day_of_month;  //The last day taken for counting is th
+             -e same as satellite's current day                             
+ 208   3                              else                                                                                                                                            //Otherwise
+ 209   3                                      l_uc_last_day_to_count = checkEndDayOfTheMonth(l_uc_temp_month,l_uc_temp_year); //Check the number of 
+             -the days for that particular month
+ 210   3                              
+ 211   3                              l_us_no_of_days += (l_uc_last_day_to_count-l_uc_initial_day_to_count+1);        //Increase the number of the d
+             -ays counted
+ 212   3                      }
+ 213   2              }
+ 214   1      
+ 215   1              l_us_no_of_days--;
+ 216   1      
+ 217   1              return l_us_no_of_days;
+ 218   1      }
+ 219          
+ 220          //------------------------------------------------------------------------------------
+ 221          // Get Hour, Minute, and Seconds info
+ 222          //------------------------------------------------------------------------------------
+ 223          // Function's test result: fully functional
+ 224          //------------------------------------------------------------------------------------
+ 225          // It is noted that the way to get Hour, minute, second info from this function is
+ 226          // not so much useful near the final implementation, since it is only used once.
+ 227          unsigned long getHMSInfo (void)
+C51 COMPILER V9.02   LUXP_TIME                                                             01/09/2014 12:21:22 PAGE 5   
+
+ 228          {
+ 229   1              char                    l_c_no_of_second                        = 0x00;
+ 230   1              char                    l_c_no_of_minute                        = 0x00;
+ 231   1              char                    l_c_no_of_hour                          = 0x00;
+ 232   1              char                    l_c_initial_no_of_second        = 0x00;
+ 233   1              char                    l_c_current_no_of_second        = 0x00;
+ 234   1              char                    l_c_initial_no_of_minute        = 0x00;
+ 235   1              char                    l_c_current_no_of_minute        = 0x00;
+ 236   1              char                    l_c_initial_no_of_hour          = 0x00;
+ 237   1              char                    l_c_current_no_of_hour          = 0x00;
+ 238   1              char                    l_c_minus_a_minute                      = 0x00;
+ 239   1              char                    l_c_minus_an_hour                       = 0x00;
+ 240   1              char                    l_c_minus_a_day                         = 0x00;
+ 241   1              unsigned long   l_ul_temp_hms_info                      = 0x00000000;
+ 242   1              unsigned long   l_ul_hms_info                           = 0x00000000;
+ 243   1      
+ 244   1              //Assign second info
+ 245   1              l_c_initial_no_of_second = str_sat_date.uc_init_s;
+ 246   1              l_c_current_no_of_second = str_sat_date.uc_current_s;
+ 247   1      
+ 248   1              if (l_c_current_no_of_second >= l_c_initial_no_of_second)                                                               //If currentNoOfSeconds is greater or eq
+             -ual to initialNoOfSeconds
+ 249   1                      l_c_no_of_second        =               l_c_current_no_of_second - l_c_initial_no_of_second;    //Assign noOfSeconds value as
+             - currentNoOfSeconds - initialNoOfSeconds
+ 250   1              else {                                                                                                                                                                  //Otherwise
+ 251   2                      l_c_no_of_second        = 60 +  l_c_current_no_of_second - l_c_initial_no_of_second;    //Adds 60 to the calculat
+             -ion
+ 252   2                      l_c_minus_a_minute      = 0x01;                                                                                                                 //Indicates tha minus a minute operation would be needed later
+ 253   2              }
+ 254   1      
+ 255   1              l_ul_hms_info   = l_c_no_of_second;                                                                                                             //Assign l_c_no_of_second value to the last two bytes of 
+             -l_ul_hms_info
+ 256   1              l_ul_hms_info   &= 0x000000FF;                                                                                                                  //Ensures that only the last two bytes of the l_ul_hms_info i
+             -s now occupied by seconds info
+ 257   1      
+ 258   1              //Assign minute info
+ 259   1              l_c_initial_no_of_minute = str_sat_date.uc_init_min;
+ 260   1              l_c_current_no_of_minute = str_sat_date.uc_current_min - l_c_minus_a_minute;
+ 261   1      
+ 262   1              if (l_c_current_no_of_minute >= l_c_initial_no_of_minute)                                                               //If l_c_current_no_of_minute is greater
+             - or equal to l_c_initial_no_of_minute
+ 263   1                      l_c_no_of_minute        =               l_c_current_no_of_minute - l_c_initial_no_of_minute;    //Assign l_c_no_of_minute val
+             -ue as l_c_current_no_of_minute - l_c_initial_no_of_minute
+ 264   1              else {                                                                                                                                                                  //Otherwise
+ 265   2                      l_c_no_of_minute        = 60 +  l_c_current_no_of_minute - l_c_initial_no_of_minute;    //Adds 60 to the calculat
+             -ion
+ 266   2                      l_c_minus_an_hour       = 1;                                                                                                                    //Indicates tha minus an hour operation would be needed later
+ 267   2              }
+ 268   1      
+ 269   1              l_ul_temp_hms_info      =       l_c_no_of_minute;                                       //Assign l_c_no_of_minute value to the last two bytes of l_u
+             -l_temp_hms_info
+ 270   1              l_ul_temp_hms_info      =       l_ul_temp_hms_info << 8;                        //Shift the value by 8 bits to the left
+ 271   1              l_ul_temp_hms_info      &=      0x0000FF00;                                                     //clear all info but minutes info
+ 272   1              l_ul_hms_info           =       l_ul_hms_info | l_ul_temp_hms_info;     //Insert minutes info to l_ul_hms_info variable
+ 273   1              l_ul_temp_hms_info      &=      0x00000000;                                                     //clear l_ul_temp_hms_info variable
+ 274   1      
+ 275   1              //Assign hour info
+ 276   1              l_c_initial_no_of_hour = str_sat_date.uc_init_hour;
+ 277   1              l_c_current_no_of_hour = str_sat_date.uc_current_hour - l_c_minus_an_hour;
+ 278   1      
+ 279   1              if (l_c_current_no_of_hour >= l_c_initial_no_of_hour)                                                   //If l_c_current_no_of_hour is greater or equ
+             -al to l_c_initial_no_of_hour
+C51 COMPILER V9.02   LUXP_TIME                                                             01/09/2014 12:21:22 PAGE 6   
+
+ 280   1                      l_c_no_of_hour  =               l_c_current_no_of_hour - l_c_initial_no_of_hour;        //Assign l_c_no_of_hour value as l_
+             -c_current_no_of_hour - l_c_initial_no_of_hour
+ 281   1              else {                                                                                                                                                  //Otherwise
+ 282   2                      l_c_no_of_hour  = 24 +  l_c_current_no_of_hour - l_c_initial_no_of_hour;        //Adds 24 to the calculation
+ 283   2                      l_c_minus_a_day = 1;                                                                                                            //Indicates tha minus a day operation would be needed later
+ 284   2              }
+ 285   1      
+ 286   1              l_ul_temp_hms_info      =       l_c_no_of_hour;                                         //Assign l_c_no_of_hour value to the last two bytes of l_ul_t
+             -emp_hms_info
+ 287   1              l_ul_temp_hms_info      =       l_ul_temp_hms_info << 16;                       //Shift the value by 16 bits to the left
+ 288   1              l_ul_temp_hms_info      &=      0x00FF0000;                                                     //clear all info but hours info
+ 289   1              l_ul_hms_info           =       l_ul_hms_info | l_ul_temp_hms_info;     //Insert hours info to l_ul_hms_info variable
+ 290   1      
+ 291   1              if (l_c_minus_a_day)    l_ul_hms_info |= 0x01000000;            //If needed, insert minus one day information in the l
+             -_ul_hms_info value
+ 292   1      
+ 293   1              return l_ul_hms_info;
+ 294   1      }
+ 295          #endif
+ 296          
+ 297          //------------------------------------------------------------------------------------
+ 298          // To assign last day of the month
+ 299          //------------------------------------------------------------------------------------
+ 300          // Function's test result: fully functional
+ 301          //------------------------------------------------------------------------------------
+ 302          // In OBDH software, there is only one checkEndDayOfTheMonth(). The adcs/real_time.h
+ 303          // which contains this function is used for ADCS software.
+ 304          unsigned char checkEndDayOfTheMonth (unsigned char l_uc_month_to_check, unsigned char l_uc_year_to_check)
+ 305          {
+ 306   1              unsigned char   l_uc_end_day_of_the_month;
+ 307   1              bit                     l_b_leap_year;
+ 308   1      
+ 309   1              //If the last two bits of the year to check has value or the year to check is 0x00 (year 2000), it is not
+             - a leap year
+ 310   1              if ((l_uc_year_to_check & 0x03) || (l_uc_year_to_check == 0x00)) 
+ 311   1                      l_b_leap_year = 0;
+ 312   1              //If the last two bits of the year to check has no value, it is a leap year     
+ 313   1              else l_b_leap_year = 1;
+ 314   1      
+ 315   1              //For month: Feb
+ 316   1              if (l_uc_month_to_check == 0x02)
+ 317   1              {
+ 318   2                      if (!l_b_leap_year)                                             //If it is not a leap year
+ 319   2                              l_uc_end_day_of_the_month = 0x1C;       //(28 days)
+ 320   2                      else                                                                    //If it is a leap year
+ 321   2                              l_uc_end_day_of_the_month = 0x1D;       //(29 days)
+ 322   2              }
+ 323   1              //For months: Apr, Jun, Sep, Nov
+ 324   1              else if (l_uc_month_to_check == 0x04 || l_uc_month_to_check == 0x06 || l_uc_month_to_check == 0x09 || l_u
+             -c_month_to_check == 0x0B)
+ 325   1                      l_uc_end_day_of_the_month = 0x1E;               //(30 days)
+ 326   1              //For other months: Jan, Mar, May, Jul, Aug, Oct, Dec
+ 327   1              else
+ 328   1                      l_uc_end_day_of_the_month = 0x1F;               //(31 days)
+ 329   1      
+ 330   1              return l_uc_end_day_of_the_month;
+ 331   1      }
+ 332          
+ 333          #if (UPDATE_HANDLER_ENABLE == 1)
+ 334          //------------------------------------------------------------------------------------
+ 335          // To update and store current satellite date
+ 336          //------------------------------------------------------------------------------------
+C51 COMPILER V9.02   LUXP_TIME                                                             01/09/2014 12:21:22 PAGE 7   
+
+ 337          // Function's test result: fully functional
+ 338          //------------------------------------------------------------------------------------
+ 339          void updateSatDate (void)
+ 340          {
+ 341   1              str_sat_date.us_current_ms                              = (unsigned short)(twoDec2oneHex(str_rtc_data.uc_ths) * 10);
+ 342   1              str_sat_date.uc_current_s                               = twoDec2oneHex(str_rtc_data.uc_s);
+ 343   1              str_sat_date.uc_current_min                     = twoDec2oneHex(str_rtc_data.uc_min);
+ 344   1              str_sat_date.uc_current_hour                    = twoDec2oneHex(str_rtc_data.uc_cenh);
+ 345   1              str_sat_date.uc_current_day_of_week     = twoDec2oneHex(str_rtc_data.uc_day);
+ 346   1              str_sat_date.uc_current_day_of_month    = twoDec2oneHex(str_rtc_data.uc_date);
+ 347   1              str_sat_date.uc_current_month                   = twoDec2oneHex(str_rtc_data.uc_month);
+ 348   1              str_sat_date.uc_current_year                    = twoDec2oneHex(str_rtc_data.uc_year);
+ 349   1      }
+ 350          #endif
+ 351          
+ 352          #if (UPDATE_HANDLER_ENABLE == 1)
+ 353          //------------------------------------------------------------------------------------
+ 354          // To retrieve satellite's time
+ 355          //------------------------------------------------------------------------------------
+ 356          // Function's test result: fully functional
+ 357          //------------------------------------------------------------------------------------
+ 358          unsigned short getSatTimeFromRTC (void)
+ 359          {
+ 360   1              unsigned short l_us_error_code;
+ 361   1              unsigned short l_us_rtc_error_code;
+ 362   1              unsigned short l_us_no_of_days;
+ 363   1              unsigned long l_ul_hms_info;
+ 364   1      
+ 365   1              #if (DEBUGGING_FEATURE == 1)
+ 366   1              l_us_rtc_error_code = rtcGetTime(0);                    //Get latest date from RTC
+ 367   1              #else
+                      l_us_rtc_error_code = rtcGetTime();                     //Get latest date from RTC
+                      #endif
+ 370   1      
+ 371   1              if (!l_us_rtc_error_code)
+ 372   1                      updateSatDate();                //Update current satellite days
+ 373   1              else return EC_RTC_GET_TIME_FAIL;
+ 374   1      
+ 375   1              l_us_no_of_days         = countNoOfDays();      //Get no of day elapsed since first initialized
+ 376   1              l_ul_hms_info           = getHMSInfo();         //Get hour, minute, and seconds info
+ 377   1      
+ 378   1              if (l_ul_hms_info & 0x01000000) l_us_no_of_days--;      //Adjust no of day elapsed if HMS info contain 
+ 379   1                                                                                                                      //minus one day information
+ 380   1      
+ 381   1              //Set satellite's current time
+ 382   1              str_sat_time.us_ms              = str_sat_date.us_current_ms;
+ 383   1              str_sat_time.uc_s               = l_ul_hms_info;
+ 384   1              str_sat_time.uc_min     = l_ul_hms_info >> 8; 
+ 385   1              str_sat_time.uc_hour    = l_ul_hms_info >> 16;
+ 386   1              str_sat_time.us_day     = l_us_no_of_days;
+ 387   1      
+ 388   1              //Set function's error code
+ 389   1              l_us_error_code = EC_SUCCESSFUL;
+ 390   1      
+ 391   1              //Limit check, update function's l_us_error_code if there is any time limit violated
+ 392   1              //The superfluous check are removed
+ 393   1              if (str_sat_time.us_ms > 990)
+ 394   1                      l_us_error_code = EC_SATELLITE_TIME_MILISECOND_ERROR;
+ 395   1              if (str_sat_time.uc_s > 59)
+ 396   1                      l_us_error_code = EC_SATELLITE_TIME_SECOND_ERROR;
+ 397   1              if (str_sat_time.uc_min > 59)
+ 398   1                      l_us_error_code = EC_SATELLITE_TIME_MINUTE_ERROR;
+C51 COMPILER V9.02   LUXP_TIME                                                             01/09/2014 12:21:22 PAGE 8   
+
+ 399   1              if (str_sat_time.uc_hour > 23)
+ 400   1                      l_us_error_code = EC_SATELLITE_TIME_HOUR_ERROR;
+ 401   1              if (str_sat_time.us_day > 7300)
+ 402   1                      l_us_error_code = EC_SATELLITE_TIME_DAY_ERROR;
+ 403   1      
+ 404   1              return l_us_error_code;
+ 405   1      }
+ 406          
+ 407          //------------------------------------------------------------------------------------
+ 408          // To convert retrieved satellite's time to no of seconds
+ 409          //------------------------------------------------------------------------------------
+ 410          // Function's test result: fully functional
+ 411          //------------------------------------------------------------------------------------
+ 412          unsigned long convertSatTimeFromRTCToSec (void)
+ 413          {
+ 414   1              unsigned long l_ul_satellite_second = 0x00000000;
+ 415   1              // The proposed lines:
+ 416   1              //
+ 417   1              // l_ul_satellite_second=str_sat_time.us_day;
+ 418   1              // l_ul_satellite_second*=24;
+ 419   1              // l_ul_satellite_second+=str_sat_time.uc_hour;
+ 420   1              // l_ul_satellite_second*=60;
+ 421   1              // l_ul_satellite_second+=str_sat_time.uc_min;
+ 422   1              // l_ul_satellite_second*=60;
+ 423   1              // l_ul_satellite_second+=str_sat_time.uc_s;
+ 424   1              //
+ 425   1              // are not used because it was found to be using more code size than the
+ 426   1              // current line. Since the uC used is 16-bit, long and float data type operations
+ 427   1              // would introduce more assembly code instructions than short or char.
+ 428   1              l_ul_satellite_second = (unsigned long)(((unsigned long)(((unsigned long)(str_sat_time.us_day*24) + (unsi
+             -gned long)(str_sat_time.uc_hour))*60) + (unsigned long)(str_sat_time.uc_min))*60) + (unsigned long)(str_sat_time.uc_s);
+ 429   1              return l_ul_satellite_second;
+ 430   1      }
+ 431          
+ 432          //------------------------------------------------------------------------------------
+ 433          // To get satellite's time in no of seconds
+ 434          //------------------------------------------------------------------------------------
+ 435          // Function's test result: fully functional
+ 436          //------------------------------------------------------------------------------------
+ 437          unsigned short getSatTimeFromRTCInSec (void)
+ 438          {
+ 439   1              unsigned short l_us_error_code = EC_INIT;
+ 440   1      
+ 441   1              l_us_error_code = getSatTimeFromRTC();
+ 442   1              if (!l_us_error_code)
+ 443   1                      str_obdh_data.ul_rtc_ref_time_s = convertSatTimeFromRTCToSec();
+ 444   1      
+ 445   1              return l_us_error_code;
+ 446   1      }
+ 447          #endif
+ 448          #endif
+ 449          
+ 450          //------------------------------------------------------------------------------------
+ 451          // To get satellite's time and orbit for HK purpose
+ 452          //------------------------------------------------------------------------------------
+ 453          // Function's test result: fully functional
+ 454          //------------------------------------------------------------------------------------
+ 455          void getHKTimeAndOrbit (void)
+ 456          {
+ 457   1              //Get satellite time
+ 458   1              str_obdh_data.ul_latest_hk_sampling_time_s = str_obdh_data.ul_obc_time_s;
+ 459   1      
+C51 COMPILER V9.02   LUXP_TIME                                                             01/09/2014 12:21:22 PAGE 9   
+
+ 460   1              //Get satellite orbit
+ 461   1              str_obdh_data.us_latest_hk_sampling_orbit = str_obdh_data.us_current_rev_no;
+ 462   1      }
+ 463          
+ 464          #if (RTC_CMD_ENABLE == 1)
+ 465          //------------------------------------------------------------------------------------
+ 466          // To convert second info to date update info
+ 467          //------------------------------------------------------------------------------------
+ 468          // Function's test result: fully functional
+ 469          //------------------------------------------------------------------------------------
+ 470          void sec2DateUpdateFromRef (unsigned long l_ul_input_s)
+ 471          {
+ 472   1          unsigned char l_uc_s_remainder;
+ 473   1          unsigned char l_uc_min_remainder;
+ 474   1          unsigned char l_uc_hour_remainder;
+ 475   1          unsigned short l_us_no_of_days;
+ 476   1          unsigned long l_ul_temp_s;
+ 477   1      
+ 478   1          unsigned char l_uc_this_second;    
+ 479   1          unsigned char l_uc_this_min;    
+ 480   1          unsigned char l_uc_this_hour;    
+ 481   1          unsigned char l_uc_this_year;
+ 482   1          unsigned char l_uc_this_month;
+ 483   1          unsigned char l_uc_this_day_of_month;
+ 484   1          unsigned char l_uc_end_day_of_this_month;
+ 485   1          
+ 486   1          //Find the excessive seconds
+ 487   1          l_uc_s_remainder = l_ul_input_s % 60;
+ 488   1      
+ 489   1          //Find the excessive minutes
+ 490   1          l_ul_temp_s = l_ul_input_s/60;
+ 491   1          l_uc_min_remainder = l_ul_temp_s % 60;
+ 492   1      
+ 493   1          //Find the excessive hours
+ 494   1          l_ul_temp_s = l_ul_input_s/3600;
+ 495   1          l_uc_hour_remainder = l_ul_temp_s % 24;
+ 496   1      
+ 497   1          //Find the excessive days
+ 498   1          l_us_no_of_days = l_ul_input_s/86400;
+ 499   1          
+ 500   1          //Handle carriers
+ 501   1          l_uc_this_second = l_uc_s_remainder + str_sat_date.uc_init_s;
+ 502   1          l_uc_this_min = l_uc_min_remainder + str_sat_date.uc_init_min;
+ 503   1          l_uc_this_hour = l_uc_hour_remainder + str_sat_date.uc_init_hour;
+ 504   1          
+ 505   1          if (l_uc_this_second >= 60){
+ 506   2              l_uc_this_second -= 60;
+ 507   2              l_uc_this_min++;
+ 508   2          }
+ 509   1          
+ 510   1          if (l_uc_this_min >=60){
+ 511   2              l_uc_this_min -=60;
+ 512   2              l_uc_this_hour++;
+ 513   2          }
+ 514   1          
+ 515   1          if (l_uc_this_hour >= 24){
+ 516   2              l_uc_this_hour -=24;
+ 517   2              l_us_no_of_days++;
+ 518   2          }
+ 519   1          
+ 520   1          //Find at first, this day of month, this month and this year is the same as
+ 521   1          //reference value
+C51 COMPILER V9.02   LUXP_TIME                                                             01/09/2014 12:21:22 PAGE 10  
+
+ 522   1          l_uc_this_year = str_sat_date.uc_init_year;
+ 523   1          l_uc_this_month = str_sat_date.uc_init_month;
+ 524   1          l_uc_this_day_of_month = str_sat_date.uc_init_day_of_month;
+ 525   1          
+ 526   1          //While there is an uncounted day, keep this loop
+ 527   1          while (l_us_no_of_days){
+ 528   2              //Get end of the month value for this month and this year
+ 529   2              l_uc_end_day_of_this_month = checkEndDayOfTheMonth(l_uc_this_month,l_uc_this_year);
+ 530   2              
+ 531   2              //If end day of the month - this day of the month + 1
+ 532   2              if (l_us_no_of_days >= (l_uc_end_day_of_this_month-l_uc_this_day_of_month+1)){
+ 533   3                  l_us_no_of_days -= (l_uc_end_day_of_this_month-l_uc_this_day_of_month+1);
+ 534   3                  l_uc_this_month++;
+ 535   3                  if (l_uc_this_month > 12){
+ 536   4                      l_uc_this_month = 1;
+ 537   4                      l_uc_this_year++;
+ 538   4                  }
+ 539   3                  l_uc_this_day_of_month = 1;
+ 540   3              }
+ 541   2              else{
+ 542   3                  l_uc_this_day_of_month += l_us_no_of_days;
+ 543   3                  l_us_no_of_days = 0;
+ 544   3              }
+ 545   2          }
+ 546   1      
+ 547   1              str_date_update.us_ms = 0;
+ 548   1              str_date_update.uc_s = l_uc_this_second;
+ 549   1              str_date_update.uc_min = l_uc_this_min;
+ 550   1              str_date_update.uc_hour = l_uc_this_hour;
+ 551   1              str_date_update.uc_day = l_uc_this_day_of_month;
+ 552   1              str_date_update.uc_month = l_uc_this_month;
+ 553   1              str_date_update.uc_year = l_uc_this_year;
+ 554   1      }
+ 555          #endif
+ 556          #endif
+ 557          
+ 558          #if (DEBUGGING_FEATURE == 1)
+ 559          //------------------------------------------------------------------------------------
+ 560          // To measure uC's timer value at one moment, for time measurement (faster mode)
+ 561          //------------------------------------------------------------------------------------
+ 562          // Function's test result: fully functional
+ 563          //------------------------------------------------------------------------------------
+ 564          void fastRecordTimerValue (unsigned char l_uc_record_block)
+ 565          {
+ 566   1              char SFRPAGE_SAVE = SFRPAGE;        //Save Current SFR page
+ 567   1              unsigned char l_uc_temp_timer_value;
+ 568   1      
+ 569   1              SFRPAGE = TMR4_PAGE;
+ 570   1      
+ 571   1              //To record timer value
+ 572   1              //Ian (2012-05-15): the overflow occurs when TMR4 (TMR4H and TMR4L) value change from
+ 573   1              //                                      0xffff to 0x0000
+ 574   1              g_uc_timer_value_low[l_uc_record_block]                         = TMR4L;
+ 575   1              g_uc_timer_value_high[l_uc_record_block]                        = TMR4H;
+ 576   1              g_us_timer_flag_counter_value[l_uc_record_block]        = g_us_timer_flag_counter;
+ 577   1      
+ 578   1              //To correct error in recording extreme high timer value
+ 579   1              l_uc_temp_timer_value                                                                   = TMR4L;        
+ 580   1              if (l_uc_temp_timer_value < g_uc_timer_value_low[l_uc_record_block]){
+ 581   2                      g_uc_timer_value_low[l_uc_record_block]                         = l_uc_temp_timer_value;
+ 582   2                      g_uc_timer_value_high[l_uc_record_block]                        = TMR4H;
+ 583   2                      g_us_timer_flag_counter_value[l_uc_record_block]        = g_us_timer_flag_counter;
+C51 COMPILER V9.02   LUXP_TIME                                                             01/09/2014 12:21:22 PAGE 11  
+
+ 584   2              }
+ 585   1      
+ 586   1              SFRPAGE = SFRPAGE_SAVE;             //Restore SFR page detector
+ 587   1      }
+ 588          
+ 589          //------------------------------------------------------------------------------------
+ 590          // Common sequence to start timing
+ 591          //------------------------------------------------------------------------------------
+ 592          // Function's test result: fully functional
+ 593          //------------------------------------------------------------------------------------
+ 594          void startTiming (void)
+ 595          {
+ 596   1              g_uc_combn_flag |= STMR_FLAG_COUNT_START;
+ 597   1              fastRecordTimerValue(0);
+ 598   1      }
+ 599          
+ 600          //------------------------------------------------------------------------------------
+ 601          // Common sequence to end timing
+ 602          //------------------------------------------------------------------------------------
+ 603          // Function's test result: fully functional
+ 604          //------------------------------------------------------------------------------------
+ 605          void endTiming (void)
+ 606          {
+ 607   1              fastRecordTimerValue(1);
+ 608   1              g_uc_combn_flag &= ~STMR_FLAG_COUNT_START;
+ 609   1      }
+ 610          
+ 611          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2034    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----      58
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,1369 @@
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 1   
+
+
+C51 COMPILER V9.02, COMPILATION OF MODULE LUXP_STORING
+NO OBJECT MODULE REQUESTED
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE luxp_storing.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+*** WARNING C500 IN LINE 1 OF LUXP_STORING.C: LICENSE ERROR (R20D: CONTENT ERROR IN FLF FILE)
+
+   1          //------------------------------------------------------------------------------------
+   2          // Luxp_storing.c
+   3          //------------------------------------------------------------------------------------
+   4          // Copyright (C) 2013 Nanyang Technological University.
+   5          //
+   6          // AUTH: IAN
+   7          //               CHEW YAN CHONG
+   8          // DATE: 03 APR 2013
+   9          //
+  10          // The program Luxp_storing.c will be downloaded to the Pumpkin Motherboard with 
+  11          // C8051F120 uC as part of the VELOX-P Pico-Satellite Flight Software. 
+  12          //
+  13          // This file contains all storing functions of the Flight Software
+  14          //
+  15          //------------------------------------------------------------------------------------
+  16          // Overall functional test status
+  17          //------------------------------------------------------------------------------------
+  18          // Partially tested
+  19          //
+  20          //------------------------------------------------------------------------------------
+  21          // Overall documentation status
+  22          //------------------------------------------------------------------------------------
+  23          // Minimally documented
+  24          //------------------------------------------------------------------------------------
+  25          
+  26          #include <luxp_storing.h>
+  27          
+  28          #if (RTC_CMD_ENABLE == 1)
+  29          //------------------------------------------------------------------------------------
+  30          // RTC storing functions
+  31          //------------------------------------------------------------------------------------
+  32          
+  33          //------------------------------------------------------------------------------------
+  34          // To store RTC time bytes
+  35          //------------------------------------------------------------------------------------
+  36          void storeRTC (void)
+  37          {
+  38   1              str_rtc_data.uc_ths             = g_uc_i2c_data_in[0];
+  39   1              str_rtc_data.uc_s                       = g_uc_i2c_data_in[1];
+  40   1              str_rtc_data.uc_min             = g_uc_i2c_data_in[2];
+  41   1              str_rtc_data.uc_cenh            = g_uc_i2c_data_in[3];
+  42   1              str_rtc_data.uc_day             = g_uc_i2c_data_in[4];
+  43   1              str_rtc_data.uc_date            = g_uc_i2c_data_in[5];
+  44   1              str_rtc_data.uc_month           = g_uc_i2c_data_in[6];
+  45   1              str_rtc_data.uc_year            = g_uc_i2c_data_in[7];
+  46   1      }
+  47          #endif
+  48          
+  49          #if (ISIS_CMD_ENABLE == 1)
+  50          //------------------------------------------------------------------------------------
+  51          // ISIS (COMM Subsystem) storing functions
+  52          //------------------------------------------------------------------------------------
+  53          
+  54          //------------------------------------------------------------------------------------
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 2   
+
+  55          // To store all ISIS parameters
+  56          //------------------------------------------------------------------------------------
+  57          void storeISIS (void)
+  58          {
+  59   1              switch (g_uc_i2c_target){
+  60   2                      case IMC_ADDR:
+  61   2                              switch (g_uc_i2c_msg_out){
+  62   3                                      case IMC_I2C_GET_NOFR:
+  63   3                                              str_imc_hk.uc_receiver_no_of_frame = g_uc_i2c_data_in[0];
+  64   3                                              break;
+  65   3      
+  66   3                                      case IMC_I2C_REC_DOFF:
+  67   3                                              str_imc_hk.us_doppler_offset = (unsigned short)(g_uc_i2c_data_in[1] << 8) + g_uc_i2c_data_in[0];
+  68   3                                              break;
+  69   3                      
+  70   3                                      case IMC_I2C_REC_SSTR:
+  71   3                                              str_imc_hk.us_receiver_signal_strength = (unsigned short)(g_uc_i2c_data_in[1] << 8) + g_uc_i2c_data_i
+             -n[0];
+  72   3                                              break;
+  73   3                      
+  74   3                                      case IMC_I2C_TRN_RPOW:
+  75   3                                              str_imc_hk.us_transmitter_reflected_power = (unsigned short)(g_uc_i2c_data_in[1] << 8) + g_uc_i2c_dat
+             -a_in[0];
+  76   3                                              break;
+  77   3                      
+  78   3                                      case IMC_I2C_TRN_FPOW:
+  79   3                                              str_imc_hk.us_transmitter_forward_power = (unsigned short)(g_uc_i2c_data_in[1] << 8) + g_uc_i2c_data_
+             -in[0];
+  80   3                                              break;
+  81   3                      
+  82   3                                      case IMC_I2C_TRN_ICON:
+  83   3                                              str_imc_hk.us_transmitter_current_consumption = (unsigned short)(g_uc_i2c_data_in[1] << 8) + g_uc_i2c
+             -_data_in[0];
+  84   3                                              break;
+  85   3                      
+  86   3                                      case IMC_I2C_REC_ICON:
+  87   3                                              str_imc_hk.us_receiver_current_consumption = (unsigned short)(g_uc_i2c_data_in[1] << 8) + g_uc_i2c_da
+             -ta_in[0];
+  88   3                                              break;
+  89   3                      
+  90   3                                      case IMC_I2C_POW_AMPT:
+  91   3                                              str_imc_hk.us_power_amplifier_temperature = (unsigned short)(g_uc_i2c_data_in[1] << 8) + g_uc_i2c_dat
+             -a_in[0];
+  92   3                                              break;
+  93   3                      
+  94   3                                      case IMC_I2C_POW_BUSV:
+  95   3                                              str_imc_hk.us_power_bus_voltage = (unsigned short)(g_uc_i2c_data_in[1] << 8) + g_uc_i2c_data_in[0];
+  96   3                                              break;
+  97   3                      
+  98   3                                      case IMC_I2C_POW_BUSV_ICON:
+  99   3                                              str_imc_hk.us_power_bus_voltage                                 = (unsigned short)(g_uc_i2c_data_in[1] << 8) + g_uc_i2c_data_in[0
+             -];
+ 100   3                                              str_imc_hk.us_receiver_current_consumption              = (unsigned short)(g_uc_i2c_data_in[3] << 8) + g_uc_i2c_
+             -data_in[2];
+ 101   3                                              str_imc_hk.us_transmitter_current_consumption   = (unsigned short)(g_uc_i2c_data_in[5] << 8) + g_uc_i2
+             -c_data_in[4];
+ 102   3                                              break;
+ 103   3                      
+ 104   3                                      case IMC_I2C_REC_UPTM:
+ 105   3                                              str_imc_hk.uc_receiver_uptime_minutes           = g_uc_i2c_data_in[0];
+ 106   3                                              str_imc_hk.uc_receiver_uptime_hours             = g_uc_i2c_data_in[1];
+ 107   3                                              str_imc_hk.uc_receiver_uptime_days                      = g_uc_i2c_data_in[2];
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 3   
+
+ 108   3                                              break;
+ 109   3                      
+ 110   3                                      default:
+ 111   3                                              break;
+ 112   3                              }
+ 113   2                              break;
+ 114   2      
+ 115   2                      case ITC_ADDR:
+ 116   2                              switch (g_uc_i2c_msg_out){
+ 117   3                                      case ITC_I2C_TRN_UPTM:
+ 118   3                                              str_itc_hk.uc_transmitter_uptime_minutes        = g_uc_i2c_data_in[0];
+ 119   3                                              str_itc_hk.uc_transmitter_uptime_hours          = g_uc_i2c_data_in[1];
+ 120   3                                              str_itc_hk.uc_transmitter_uptime_days           = g_uc_i2c_data_in[2];
+ 121   3                                              break;
+ 122   3                      
+ 123   3                                      case ITC_I2C_TRN_STATE:
+ 124   3                                              str_itc_hk.uc_transmitter_state                         = g_uc_i2c_data_in[0];
+ 125   3                                              break;
+ 126   3                      
+ 127   3                                      default:
+ 128   3                                              break;
+ 129   3                              }
+ 130   2                              break;
+ 131   2      
+ 132   2                      default:
+ 133   2                              break;
+ 134   2              }
+ 135   1      }
+ 136          #endif
+ 137          
+ 138          #if (ANTENNA_CMD_ENABLE == 1)
+ 139          //------------------------------------------------------------------------------------
+ 140          // Antenna deployment subsystem storing functions
+ 141          //------------------------------------------------------------------------------------
+ 142          void storeAntenna (void)
+ 143          {
+ 144   1              switch (g_uc_i2c_msg_out){
+ 145   2                      case ANTENNA_I2C_GET_DPLY_1_COUNT:
+ 146   2                      case ANTENNA_I2C_GET_DPLY_2_COUNT:
+ 147   2                      case ANTENNA_I2C_GET_DPLY_3_COUNT:
+ 148   2                      case ANTENNA_I2C_GET_DPLY_4_COUNT:
+ 149   2                              str_antenna_hk.uc_actv_count[g_uc_i2c_msg_out-ANTENNA_I2C_GET_DPLY_1_COUNT] = g_uc_i2c_data_in[0];
+ 150   2                              break;
+ 151   2      
+ 152   2                      case ANTENNA_I2C_GET_DPLY_1_TIME:
+ 153   2                      case ANTENNA_I2C_GET_DPLY_2_TIME:
+ 154   2                      case ANTENNA_I2C_GET_DPLY_3_TIME:
+ 155   2                      case ANTENNA_I2C_GET_DPLY_4_TIME:
+ 156   2                              str_antenna_hk.uc_actv_time[g_uc_i2c_msg_out-ANTENNA_I2C_GET_DPLY_1_TIME] = g_uc_i2c_data_in[0];
+ 157   2                              break;
+ 158   2      
+ 159   2                      //The reading of antenna temperature is noticed to be unused
+ 160   2                      case ANTENNA_I2C_GET_TEMP:
+ 161   2                              str_antenna_hk.us_temp = (unsigned short)(g_uc_i2c_data_in[0] << 8) + g_uc_i2c_data_in[1];
+ 162   2                              break;
+ 163   2      
+ 164   2                      //The order of the byte is as specified by the hardware
+ 165   2                      case ANTENNA_I2C_GET_DPLY_STAT:
+ 166   2                              str_antenna_hk.us_deployment_status = (unsigned short)(g_uc_i2c_data_in[1] << 8) + g_uc_i2c_data_in[0];
+ 167   2                              break;
+ 168   2      
+ 169   2                      default:
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 4   
+
+ 170   2                              break;
+ 171   2              }
+ 172   1      }
+ 173          #endif 
+ 174          
+ 175          #if (PWRS_CMD_ENABLE == 1)
+ 176          //------------------------------------------------------------------------------------
+ 177          // PWRS Subsystem storing functions
+ 178          //------------------------------------------------------------------------------------
+ 179          
+ 180          //------------------------------------------------------------------------------------
+ 181          // To store PWRS data obtained from a given array
+ 182          //------------------------------------------------------------------------------------
+ 183          void storePWRS (unsigned char *l_uc_array_p)
+ 184          {
+ 185   1              unsigned char l_uc_i;
+ 186   1      
+ 187   1              switch (g_uc_i2c_msg_out){
+ 188   2                      case PWRS_I2C_GET_HK:
+ 189   2                              for (l_uc_i = 0; l_uc_i < 5; l_uc_i++)
+ 190   2                                      str_pwrs_hk.uc_sp_temp[l_uc_i]          = *(l_uc_array_p+g_us_data_counter++);
+ 191   2                              for (l_uc_i = 0; l_uc_i < 3; l_uc_i++)
+ 192   2                                      str_pwrs_hk.us_pv_v[l_uc_i]             = insertArrayToShortGC(l_uc_array_p);
+ 193   2                              for (l_uc_i = 0; l_uc_i < 3; l_uc_i++)
+ 194   2                                      str_pwrs_hk.us_pv_i[l_uc_i]             = insertArrayToShortGC(l_uc_array_p);
+ 195   2                              str_pwrs_hk.us_batt_v[0]                                = insertArrayToShortGC(l_uc_array_p);
+ 196   2                              str_pwrs_hk.us_batt_v[1]                                = insertArrayToShortGC(l_uc_array_p);
+ 197   2                              str_pwrs_hk.us_batt_i                                   = insertArrayToShortGC(l_uc_array_p);
+ 198   2                              str_pwrs_hk.uc_batt_soc                                 = *(l_uc_array_p+g_us_data_counter++);
+ 199   2                              str_obdh_data.uc_batt_soc                               = str_pwrs_hk.uc_batt_soc;
+ 200   2                              str_pwrs_hk.uc_batt_temp[0]                     = *(l_uc_array_p+g_us_data_counter++);
+ 201   2                              str_pwrs_hk.uc_batt_temp[1]                     = *(l_uc_array_p+g_us_data_counter++);
+ 202   2                              str_pwrs_hk.us_sys_i                                    = insertArrayToShortGC(l_uc_array_p);
+ 203   2                              str_pwrs_hk.us_pcc_v                                    = insertArrayToShortGC(l_uc_array_p);
+ 204   2                              for (l_uc_i = 0; l_uc_i < 4; l_uc_i++)
+ 205   2                                      str_pwrs_hk.us_load_v[l_uc_i]           = insertArrayToShortGC(l_uc_array_p);
+ 206   2                              for (l_uc_i = 0; l_uc_i < 4; l_uc_i++)
+ 207   2                                      str_pwrs_hk.us_load_i[l_uc_i]           = insertArrayToShortGC(l_uc_array_p);
+ 208   2                              for (l_uc_i = 0; l_uc_i < 4; l_uc_i++)
+ 209   2                                      str_pwrs_hk.uc_latch_count[l_uc_i]      = *(l_uc_array_p+g_us_data_counter++);
+ 210   2                              str_pwrs_hk.uc_rst_count                                = *(l_uc_array_p+g_us_data_counter++);
+ 211   2                              str_pwrs_hk.uc_rst_cause                                = *(l_uc_array_p+g_us_data_counter++);
+ 212   2                              str_pwrs_hk.uc_mode                                     = *(l_uc_array_p+g_us_data_counter++);
+ 213   2      
+ 214   2                              //Requested by PWRS subsystem to re-check the battery SOC percentage. (PWRS subsystem requested - 20120
+             -321)
+ 215   2                              if ((str_pwrs_hk.uc_batt_soc >= 100) && str_pwrs_hk.uc_mode == PWRS_BATT_CTRL_ON)
+ 216   2                                      str_obdh_data.uc_batt_soc = 99;
+ 217   2      
+ 218   2                              //Reset PWRS SOC to 100% only when the V_CELL reaches maximum. (PWRS subsystem requested - 20120321)
+ 219   2                              if (str_pwrs_hk.uc_mode == PWRS_BATT_CTRL_OFF)
+ 220   2                                      str_obdh_data.uc_batt_soc = 100;
+ 221   2      
+ 222   2                              str_pwrs_hk.s_mcu_temp                                  = insertArrayToShortGC(l_uc_array_p);
+ 223   2                              str_pwrs_hk.c_mcu_rstsrc                                = *(l_uc_array_p+g_us_data_counter++);
+ 224   2                              break;
+ 225   2      
+ 226   2                      case PWRS_I2C_GET_SSCP:
+ 227   2                              str_pwrs_par.uc_mppt_mode                               = *(l_uc_array_p+g_us_data_counter++);
+ 228   2                              str_pwrs_par.uc_batt_heater                     = *(l_uc_array_p+g_us_data_counter++);
+ 229   2                              str_pwrs_par.uc_batt_charge_upp_limit   = *(l_uc_array_p+g_us_data_counter++);
+ 230   2                              str_pwrs_par.uc_batt_charge_low_limit   = *(l_uc_array_p+g_us_data_counter++);
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 5   
+
+ 231   2                              break;
+ 232   2      
+ 233   2                      case PWRS_I2C_GET_DATA:
+ 234   2                              if(g_uc_i2c_data_out[1] == (DATA_PWRS_UC_CHANNEL_STATUS & 0x00FF))
+ 235   2                                      str_pwrs_data.uc_channel_status = *(l_uc_array_p+g_us_data_counter+3);
+ 236   2                              else if(g_uc_i2c_data_out[1] == (DATA_PWRS_US_PV_FV_1 & 0x00FF))
+ 237   2                                      str_pwrs_data.us_pv_fv[0] = ((unsigned short)(*(l_uc_array_p+g_us_data_counter+2) << 8) + *(l_uc_array
+             -_p+g_us_data_counter+3));
+ 238   2                              else if(g_uc_i2c_data_out[1] == (DATA_PWRS_US_PV_FV_2 & 0x00FF))
+ 239   2                                      str_pwrs_data.us_pv_fv[1] = ((unsigned short)(*(l_uc_array_p+g_us_data_counter+2) << 8) + *(l_uc_array
+             -_p+g_us_data_counter+3));
+ 240   2                              else if(g_uc_i2c_data_out[1] == (DATA_PWRS_US_PV_FV_3 & 0x00FF))
+ 241   2                                      str_pwrs_data.us_pv_fv[2] = ((unsigned short)(*(l_uc_array_p+g_us_data_counter+2) << 8) + *(l_uc_array
+             -_p+g_us_data_counter+3));
+ 242   2                              break;
+ 243   2                      
+ 244   2                      default:
+ 245   2                              break;
+ 246   2              }
+ 247   1      }
+ 248          #endif
+ 249          
+ 250          #if (ADCS_CMD_ENABLE == 1)
+ 251          //------------------------------------------------------------------------------------
+ 252          // ADCS Subsystem storing functions
+ 253          //------------------------------------------------------------------------------------
+ 254          
+ 255          //------------------------------------------------------------------------------------
+ 256          // To store all ADCS data
+ 257          //------------------------------------------------------------------------------------
+ 258          void storeADCS (unsigned char *l_uc_array_p)
+ 259          {
+ 260   1              unsigned char l_uc_i;
+ 261   1      
+ 262   1              switch (g_uc_i2c_msg_out){
+ 263   2                      case ADCS_I2C_GET_HK:
+ 264   2                              for (l_uc_i = 0; l_uc_i < 3; l_uc_i++)
+ 265   2                                      str_adcs_hk.f_sunv[l_uc_i]                      = insertArrayToFloatGC(l_uc_array_p);
+ 266   2                              for (l_uc_i = 0; l_uc_i < 4; l_uc_i++)
+ 267   2                                      str_adcs_hk.f_qeb[l_uc_i]                       = insertArrayToFloatGC(l_uc_array_p);
+ 268   2                              for (l_uc_i = 0; l_uc_i < 3; l_uc_i++)
+ 269   2                                      str_adcs_hk.s_br_eci[l_uc_i]            = insertArrayToShortGC(l_uc_array_p);
+ 270   2                              for (l_uc_i = 0; l_uc_i < 3; l_uc_i++)
+ 271   2                                      str_adcs_hk.f_posv[l_uc_i]                      = insertArrayToFloatGC(l_uc_array_p);
+ 272   2                              str_adcs_hk.c_sensor_enable                     = *(l_uc_array_p+g_us_data_counter++);
+ 273   2                              str_adcs_hk.c_sensor_credit                     = *(l_uc_array_p+g_us_data_counter++);
+ 274   2                              for (l_uc_i = 0; l_uc_i < 3; l_uc_i++)
+ 275   2                                      str_adcs_hk.c_ac_m[l_uc_i]                      = *(l_uc_array_p+g_us_data_counter++);
+ 276   2                              for (l_uc_i = 0; l_uc_i < 3; l_uc_i++)
+ 277   2                                      str_adcs_hk.c_mt_i[l_uc_i]                      = *(l_uc_array_p+g_us_data_counter++);
+ 278   2                              str_adcs_hk.c_actuator_enable                   = *(l_uc_array_p+g_us_data_counter++);
+ 279   2                              str_adcs_hk.c_mode                                              = *(l_uc_array_p+g_us_data_counter++);
+ 280   2                              str_adcs_hk.s_mcu_temp                                  = insertArrayToShortGC(l_uc_array_p);
+ 281   2                              str_adcs_hk.c_mcu_rstsrc                                = *(l_uc_array_p+g_us_data_counter++);
+ 282   2                              break;
+ 283   2      
+ 284   2                      case ADCS_I2C_GET_SSCP:
+ 285   2                              str_adcs_par.s_ss_threshold                     = insertArrayToShortGC(l_uc_array_p);
+ 286   2                              for (l_uc_i = 0; l_uc_i < NO_OF_ADCS_CGAIN; l_uc_i++)
+ 287   2                                      str_adcs_par.f_cgain[l_uc_i]            = insertArrayToFloatGC(l_uc_array_p);
+ 288   2                              str_adcs_par.f_tle_epoch                                = insertArrayToFloatGC(l_uc_array_p);
+ 289   2                              str_adcs_par.f_tle_inc                                  = insertArrayToFloatGC(l_uc_array_p);
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 6   
+
+ 290   2                              str_adcs_par.f_tle_raan                                 = insertArrayToFloatGC(l_uc_array_p);
+ 291   2                              str_adcs_par.f_tle_arg_per                              = insertArrayToFloatGC(l_uc_array_p);
+ 292   2                              str_adcs_par.f_tle_ecc                                  = insertArrayToFloatGC(l_uc_array_p);
+ 293   2                              str_adcs_par.f_tle_ma                                   = insertArrayToFloatGC(l_uc_array_p);
+ 294   2                              str_adcs_par.us_tle_mm                                  = insertArrayToShortGC(l_uc_array_p);
+ 295   2                              str_adcs_par.ul_time                                    = insertArrayToLongGC(l_uc_array_p);
+ 296   2                              for (l_uc_i = 0; l_uc_i < 3; l_uc_i++)
+ 297   2                                      str_adcs_par.s_vector_2sun[l_uc_i]      = insertArrayToShortGC(l_uc_array_p);
+ 298   2                              for (l_uc_i = 0; l_uc_i < 3; l_uc_i++)
+ 299   2                                      str_adcs_par.c_ctrl_br[l_uc_i]          = (char)*(l_uc_array_p+g_us_data_counter++);
+ 300   2                              str_adcs_par.s_dgain                                    = insertArrayToShortGC(l_uc_array_p);
+ 301   2                              break;
+ 302   2      
+ 303   2                      default:
+ 304   2                              break;
+ 305   2              }
+ 306   1      }
+ 307          #endif
+ 308          
+ 309          #if (STORING_ENABLE == 1)
+ 310          //------------------------------------------------------------------------------------
+ 311          // This function handles initialization for different type of data saving
+ 312          // The initialization includes:
+ 313          //      1) Data sets to be saved
+ 314          //      2) No of data sets to be saved
+ 315          //      3) Initial SD card block pointers
+ 316          //------------------------------------------------------------------------------------
+ 317          // Data sets property:
+ 318          //      Bit0 - variable(1) / non-variable (0) pointer
+ 319          //      Bit1 - looping(1) / non-looping (0) memory space
+ 320          //      Bit7-2 - reserved
+ 321          //------------------------------------------------------------------------------------
+ 322          unsigned short initSDData(void)
+ 323          {
+ 324   1              unsigned short l_us_error_code = EC_INIT;
+ 325   1      
+ 326   1              //Initiates SD card block writing variables for different cases
+ 327   1              //------------------------------------------------------------------------------------
+ 328   1              if ((g_uc_sd_header_subsystem == ALL_SUBSYSTEMS) && (g_uc_sd_header_data_type == SD_ESSENTIAL)){
+ 329   2                      g_uc_data_type_saved_buffer[0]  = DATA_CAT_PWRS_SSCP;
+ 330   2                      g_uc_data_type_saved_buffer[1]  = DATA_CAT_ADCS_SSCP;
+ 331   2                      g_uc_data_type_saved_buffer[2]  = DATA_CAT_OBDH_SSCP;
+ 332   2                      g_uc_data_type_saved_buffer[3]  = DATA_CAT_OBDH_SELECTED_HK;
+ 333   2                      g_uc_data_type_saved_buffer[4]  = DATA_CAT_OBDH_SELECTED_DATA;
+ 334   2                      g_uc_data_type_saved_buffer[5]  = DATA_CAT_OBDH_BP;
+ 335   2                      g_uc_data_type_saved_buffer[6]  = DATA_CAT_SAT_DATE_INIT;
+ 336   2                      g_uc_data_type_saved_buffer[7]  = DATA_CAT_FROM_TO_CALLSIGN;
+ 337   2                      g_uc_no_of_data_saved                   = 8;
+ 338   2                      g_ul_initial_sd_card_bp                 = g_ul_essential_bp;
+ 339   2                      g_uc_no_of_copies                               = NO_OF_COPIES_SD_ESSENTIAL;
+ 340   2      
+ 341   2                      //Assigning data sets property
+ 342   2                      g_uc_data_sets_property                 = 0x00; //Non-variable pointer, non-looping memory space
+ 343   2      
+ 344   2                      //If the essential block pointer is normal block pointer
+ 345   2                      if (g_ul_essential_bp == SD_BP_OBDH_ESS_START){
+ 346   3                              //For constant initial block pointers
+ 347   3                              g_ul_memory_address_lower_limit = SD_BP_OBDH_ESS_START;
+ 348   3                              g_ul_memory_address_upper_limit = SD_BP_OBDH_ESS_END;
+ 349   3                              g_ul_memory_address_end                 = SD_BP_OBDH_ESS_END;
+ 350   3      
+ 351   3                              //Assign successful saving data request
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 7   
+
+ 352   3                              l_us_error_code                                 = EC_SUCCESSFUL;
+ 353   3                      }
+ 354   2                      //If the essential block pointer is very first (original) essential block pointer
+ 355   2                      else if (g_ul_essential_bp == SD_BP_OBDH_ORIGINAL_ESS_START){
+ 356   3                              //For constant initial block pointers
+ 357   3                              g_ul_memory_address_lower_limit = SD_BP_OBDH_ORIGINAL_ESS_START;
+ 358   3                              g_ul_memory_address_upper_limit = SD_BP_OBDH_ORIGINAL_ESS_END;
+ 359   3                              g_ul_memory_address_end                 = SD_BP_OBDH_ORIGINAL_ESS_END;
+ 360   3      
+ 361   3                              //Assign successful saving data request
+ 362   3                              l_us_error_code                                 = EC_SUCCESSFUL;
+ 363   3                      }
+ 364   2                      //Other than them will be unsuccessful
+ 365   2                      else
+ 366   2                              //Assign unsuccessful saving data request
+ 367   2                              l_us_error_code                                 = EC_INVALID_SAVING_DATA_REQUEST;
+ 368   2                      
+ 369   2              }
+ 370   1              else if ((g_uc_sd_header_subsystem == ALL_SUBSYSTEMS) && (g_uc_sd_header_data_type == SD_HK)){
+ 371   2                      g_uc_data_type_saved_buffer[0]  = DATA_CAT_LATEST_HK_SAMPLING_TIME_AND_ORBIT_TAI_FORMAT;
+ 372   2                      g_uc_data_type_saved_buffer[1]  = DATA_CAT_LAST_HK_EC;
+ 373   2                      g_uc_data_type_saved_buffer[2]  = DATA_CAT_PWRS_HK;
+ 374   2                      g_uc_data_type_saved_buffer[3]  = DATA_CAT_ADCS_HK;
+ 375   2                      g_uc_data_type_saved_buffer[4]  = DATA_CAT_COMM_HK;
+ 376   2                      g_uc_data_type_saved_buffer[5]  = DATA_CAT_OBDH_HK;
+ 377   2                      g_uc_no_of_data_saved                   = 6;
+ 378   2                      g_ul_initial_sd_card_bp                 = str_bp.ul_hk_write_p;
+ 379   2                      g_uc_no_of_copies                               = NO_OF_COPIES_SD_HK;
+ 380   2      
+ 381   2                      //For varied initial block pointers
+ 382   2                      g_ul_initial_sd_card_bp_address = &str_bp.ul_hk_write_p;
+ 383   2                      g_uc_no_of_overwritten_p                = &str_bp.uc_hk_overwritten;
+ 384   2                      g_ul_memory_address_lower_limit = SD_BP_HK_START;
+ 385   2                      g_ul_memory_address_upper_limit = SD_BP_HK_LIMIT;
+ 386   2                      g_ul_memory_address_end                 = SD_BP_HK_END;
+ 387   2      
+ 388   2                      //Assigning data sets property
+ 389   2                      g_uc_data_sets_property                 = 0x03; //Variable pointer, looping memory space
+ 390   2      
+ 391   2                      //Assign successful saving data request
+ 392   2                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 393   2              }
+ 394   1              else if ((g_uc_sd_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_sd_header_data_type == SD_BP)){
+ 395   2                      g_uc_data_type_saved_buffer[0]  = DATA_CAT_OBDH_BP;
+ 396   2                      g_uc_no_of_data_saved                   = 1;
+ 397   2                      g_uc_no_of_copies                               = NO_OF_COPIES_SD_BP;
+ 398   2                      g_ul_initial_sd_card_bp                 = SD_BP_OBDH_ORBIT_START + str_obdh_data.us_current_rev_no*(g_uc_no_of_copies+
+             -1);
+ 399   2      
+ 400   2                      //For non-constant initial block pointers
+ 401   2                      g_uc_no_of_overwritten_p                = &str_bp.uc_orbit_indexing_overwritten;
+ 402   2                      g_ul_memory_address_lower_limit = SD_BP_OBDH_ORBIT_START;
+ 403   2                      g_ul_memory_address_upper_limit = SD_BP_OBDH_ORBIT_LIMIT;
+ 404   2                      g_ul_memory_address_end                 = SD_BP_OBDH_ORBIT_END;
+ 405   2                      
+ 406   2                      //Assigning data sets property
+ 407   2                      g_uc_data_sets_property                 = 0x02; //Non-variable pointer, looping memory space
+ 408   2      
+ 409   2                      //Assign successful saving data request
+ 410   2                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 411   2              }
+ 412   1              else if ((g_uc_sd_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_sd_header_data_type == SD_SCHEDULE)){
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 8   
+
+ 413   2                      g_uc_data_type_saved_buffer[0]  = DATA_CAT_SCHEDULE_PAR;
+ 414   2                      g_uc_data_type_saved_buffer[1]  = DATA_CAT_SCHEDULE_1_TO_10;
+ 415   2                      g_uc_data_type_saved_buffer[2]  = DATA_CAT_SCHEDULE_11_TO_20;
+ 416   2                      g_uc_data_type_saved_buffer[3]  = DATA_CAT_SCHEDULE_21_TO_30;
+ 417   2                      g_uc_data_type_saved_buffer[4]  = DATA_CAT_SCHEDULE_31_TO_40;
+ 418   2                      g_uc_data_type_saved_buffer[5]  = DATA_CAT_SCHEDULE_41_TO_50;
+ 419   2                      g_uc_data_type_saved_buffer[6]  = DATA_CAT_SCHEDULE_51_TO_60;
+ 420   2                      g_uc_data_type_saved_buffer[7]  = DATA_CAT_SCHEDULE_61_TO_70;
+ 421   2                      g_uc_no_of_data_saved                   = 8;
+ 422   2                      g_ul_initial_sd_card_bp                 = g_ul_schedule_bp;
+ 423   2                      g_uc_no_of_copies                               = NO_OF_COPIES_SD_SCHEDULE;
+ 424   2      
+ 425   2                      //Assigning data sets property
+ 426   2                      g_uc_data_sets_property                 = 0x00; //Non-variable pointer, non-looping memory space
+ 427   2      
+ 428   2                      //If the schedule block pointer is normal block pointer
+ 429   2                      if (g_ul_schedule_bp == SD_BP_OBDH_SCHEDULE_START){
+ 430   3                              //For constant initial block pointers
+ 431   3                              g_ul_memory_address_lower_limit = SD_BP_OBDH_SCHEDULE_START;
+ 432   3                              g_ul_memory_address_upper_limit = SD_BP_OBDH_SCHEDULE_END;
+ 433   3                              g_ul_memory_address_end                 = SD_BP_OBDH_SCHEDULE_END;
+ 434   3      
+ 435   3                              //Assign successful saving data request
+ 436   3                              l_us_error_code                                 = EC_SUCCESSFUL;
+ 437   3                      }
+ 438   2                      //If the schedule block pointer is very first (original) schedule block pointer
+ 439   2                      else if (g_ul_schedule_bp == SD_BP_OBDH_ORIGINAL_SCHEDULE_START){
+ 440   3                              //For constant initial block pointers
+ 441   3                              g_ul_memory_address_lower_limit = SD_BP_OBDH_ORIGINAL_SCHEDULE_START;
+ 442   3                              g_ul_memory_address_upper_limit = SD_BP_OBDH_ORIGINAL_SCHEDULE_END;
+ 443   3                              g_ul_memory_address_end                 = SD_BP_OBDH_ORIGINAL_SCHEDULE_END;
+ 444   3      
+ 445   3                              //Assign successful saving data request
+ 446   3                              l_us_error_code                                 = EC_SUCCESSFUL;
+ 447   3                      }
+ 448   2                      //Other than them will be unsuccessful
+ 449   2                      else
+ 450   2                              //Assign unsuccessful saving data request
+ 451   2                              l_us_error_code                                 = EC_INVALID_SAVING_DATA_REQUEST;               
+ 452   2              }
+ 453   1              else if ((g_uc_sd_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_sd_header_data_type == SD_SCRIPT)){
+ 454   2                      g_uc_data_type_saved_buffer[0]  = DATA_CAT_SCRIPTSPACE_PAR;
+ 455   2                      g_uc_data_type_saved_buffer[1]  = DATA_CAT_SCRIPTSPACE_1;
+ 456   2                      g_uc_data_type_saved_buffer[2]  = DATA_CAT_SCRIPTSPACE_2;
+ 457   2                      g_uc_data_type_saved_buffer[3]  = DATA_CAT_SCRIPTSPACE_3;
+ 458   2                      g_uc_data_type_saved_buffer[4]  = DATA_CAT_SCRIPTSPACE_4;
+ 459   2                      g_uc_data_type_saved_buffer[5]  = DATA_CAT_SCRIPTSPACE_5;
+ 460   2                      g_uc_data_type_saved_buffer[6]  = DATA_CAT_SCRIPTSPACE_6;
+ 461   2                      g_uc_data_type_saved_buffer[7]  = DATA_CAT_SCRIPTSPACE_7;
+ 462   2                      g_uc_data_type_saved_buffer[8]  = DATA_CAT_SCRIPTSPACE_8;
+ 463   2                      g_uc_data_type_saved_buffer[9]  = DATA_CAT_SCRIPTSPACE_9;
+ 464   2                      g_uc_data_type_saved_buffer[10] = DATA_CAT_SCRIPTSPACE_10;
+ 465   2                      g_uc_no_of_data_saved                   = 11;
+ 466   2                      g_ul_initial_sd_card_bp                 = g_ul_script_bp;
+ 467   2                      g_uc_no_of_copies                               = NO_OF_COPIES_SD_SCRIPT;
+ 468   2      
+ 469   2                      //Assigning data sets property
+ 470   2                      g_uc_data_sets_property                 = 0x00; //Non-variable pointer, non-looping memory space
+ 471   2      
+ 472   2                      //If the script block pointer is normal block pointer
+ 473   2                      if (g_ul_script_bp == SD_BP_OBDH_SCRIPT_START){
+ 474   3                              //For constant initial block pointers
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 9   
+
+ 475   3                              g_ul_memory_address_lower_limit = SD_BP_OBDH_SCRIPT_START;
+ 476   3                              g_ul_memory_address_upper_limit = SD_BP_OBDH_SCRIPT_END;
+ 477   3                              g_ul_memory_address_end                 = SD_BP_OBDH_SCRIPT_END;
+ 478   3      
+ 479   3                              //Assign successful saving data request
+ 480   3                              l_us_error_code                                 = EC_SUCCESSFUL;
+ 481   3                      }
+ 482   2                      //If the script block pointer is very first (original) script block pointer
+ 483   2                      else if (g_ul_script_bp == SD_BP_OBDH_ORIGINAL_SCRIPT_START){
+ 484   3                              //For constant initial block pointers
+ 485   3                              g_ul_memory_address_lower_limit = SD_BP_OBDH_ORIGINAL_SCRIPT_START;
+ 486   3                              g_ul_memory_address_upper_limit = SD_BP_OBDH_ORIGINAL_SCRIPT_END;
+ 487   3                              g_ul_memory_address_end                 = SD_BP_OBDH_ORIGINAL_SCRIPT_END;
+ 488   3      
+ 489   3                              //Assign successful saving data request
+ 490   3                              l_us_error_code                                 = EC_SUCCESSFUL;
+ 491   3                      }
+ 492   2                      //Other than them will be unsuccessful
+ 493   2                      else
+ 494   2                              //Assign unsuccessful saving data request
+ 495   2                              l_us_error_code                                 = EC_INVALID_SAVING_DATA_REQUEST;               
+ 496   2              }
+ 497   1              else if ((g_uc_sd_header_subsystem == ALL_SUBSYSTEMS) && (g_uc_sd_header_data_type == SD_LOG_DATA)){
+ 498   2                      g_uc_data_type_saved_buffer[0]  = DATA_CAT_LOG_DATA_BUFFER;
+ 499   2                      g_uc_no_of_data_saved                   = 1;
+ 500   2                      g_ul_initial_sd_card_bp                 = str_bp.ul_datalog_write_p;
+ 501   2                      g_uc_no_of_copies                               = NO_OF_COPIES_SD_LOG_DATA;
+ 502   2      
+ 503   2                      //For varied initial block pointers
+ 504   2                      g_ul_initial_sd_card_bp_address = &str_bp.ul_datalog_write_p;
+ 505   2                      g_ul_memory_address_lower_limit = SD_BP_DATALOG_START;
+ 506   2                      g_ul_memory_address_upper_limit = SD_BP_DATALOG_LIMIT;
+ 507   2                      g_ul_memory_address_end                 = SD_BP_DATALOG_END;
+ 508   2      
+ 509   2                      //Assigning data sets property
+ 510   2                      g_uc_data_sets_property                 = 0x01; //Variable pointer, non-looping memory space
+ 511   2      
+ 512   2                      //Assign successful saving data request
+ 513   2                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 514   2              }
+ 515   1              else if ((g_uc_sd_header_subsystem == ALL_SUBSYSTEMS) && (g_uc_sd_header_data_type == SD_RECOVERY_PACKAGE
+             -)){
+ 516   2                      g_uc_data_type_saved_buffer[0]  = DATA_CAT_FILLED_AX25_FRAME;
+ 517   2                      g_uc_no_of_data_saved                   = 1;
+ 518   2                      g_ul_initial_sd_card_bp                 = str_bp.ul_package_recovery_write_p;
+ 519   2                      g_uc_no_of_copies                               = NO_OF_COPIES_SD_RECOVERY_PACKAGE;
+ 520   2      
+ 521   2                      //For varied initial block pointers
+ 522   2                      g_ul_initial_sd_card_bp_address = &str_bp.ul_package_recovery_write_p;
+ 523   2                      g_ul_memory_address_lower_limit = SD_BP_PACKAGE_RECOVERY_START;
+ 524   2                      g_ul_memory_address_upper_limit = SD_BP_PACKAGE_RECOVERY_LIMIT;
+ 525   2                      g_ul_memory_address_end                 = SD_BP_PACKAGE_RECOVERY_END;
+ 526   2      
+ 527   2                      //Assigning data sets property
+ 528   2                      g_uc_data_sets_property                 = 0x01; //Variable pointer, non-looping memory space
+ 529   2      
+ 530   2                      //Assign successful saving data request
+ 531   2                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 532   2              }
+ 533   1              //dec22_yc eventlog storing
+ 534   1              else if ((g_uc_sd_header_subsystem == ALL_SUBSYSTEMS) && (g_uc_sd_header_data_type == SD_EVENTLOG_DATA)){
+ 535   2                      g_uc_data_type_saved_buffer[0]  = DATA_CAT_EVENTLOG_DATA_BUFFER;
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 10  
+
+ 536   2                      g_uc_no_of_data_saved                   = 1;
+ 537   2                      g_ul_initial_sd_card_bp                 = str_bp.ul_eventlog_write_p;
+ 538   2                      g_uc_no_of_copies                               = NO_OF_COPIES_SD_EVENTLOG_DATA;
+ 539   2      
+ 540   2                      //For varied initial block pointers
+ 541   2                      g_ul_initial_sd_card_bp_address = &str_bp.ul_eventlog_write_p;
+ 542   2                      g_ul_memory_address_lower_limit = SD_BP_EVENTLOG_START;
+ 543   2                      g_ul_memory_address_upper_limit = SD_BP_EVENTLOG_LIMIT;
+ 544   2                      g_ul_memory_address_end                 = SD_BP_EVENTLOG_END;
+ 545   2      
+ 546   2                      //Assigning data sets property
+ 547   2                      g_uc_data_sets_property                 = 0x03; //Variable pointer, looping memory space
+ 548   2      
+ 549   2                      //Assign successful saving data request
+ 550   2                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 551   2              }
+ 552   1              else {
+ 553   2                      //Assign unsuccessful saving data request
+ 554   2                      l_us_error_code                                 = EC_INVALID_SAVING_DATA_REQUEST;
+ 555   2              }               
+ 556   1              //------------------------------------------------------------------------------------
+ 557   1      
+ 558   1              //Set SD card write block pointer as specified by the input first
+ 559   1              //Error code condition needs not to be added for this case. 
+ 560   1              //But in case g_ul_initial_sd_card_bp is not assigned (that is, as to make 
+ 561   1              //g_ul_sd_header_sd_write_block value 'random', the error code in this
+ 562   1              //function should indicate that SD data storing initialization is unsuccessful.
+ 563   1              g_ul_sd_header_sd_write_block = g_ul_initial_sd_card_bp;
+ 564   1              
+ 565   1              return l_us_error_code;
+ 566   1      }
+ 567          
+ 568          //------------------------------------------------------------------------------------
+ 569          // To save data from the sets of data given to be saved
+ 570          // This function will handle increment of block pointer for a set of data to save
+ 571          // WARNING:
+ 572          //      1)      g_uc_sd_header_subsystem AND g_uc_sd_header_data_type must be declared
+ 573          //              outside of this function!!!
+ 574          //------------------------------------------------------------------------------------
+ 575          unsigned short saveData (unsigned char *l_uc_array_p)
+ 576          {
+ 577   1              unsigned short l_us_error_code;
+ 578   1          unsigned char l_uc_counter = 0;
+ 579   1          unsigned short l_us_current_data_set_length = 0;
+ 580   1          unsigned short l_us_total_to_be_data_length = 0;
+ 581   1              unsigned short l_us_buffer_size = SD_CARD_BUFFER_SIZE; //Initialize as SD card buffer size unless specifi
+             -ed otherwise
+ 582   1          unsigned char *l_uc_temporary_data_buffer_p;
+ 583   1              unsigned char *l_uc_data_type_saved_buffer_p;
+ 584   1      
+ 585   1          //Initialize data sets to be saved buffer pointer
+ 586   1              l_uc_data_type_saved_buffer_p   = g_uc_data_type_saved_buffer;
+ 587   1          
+ 588   1          //Initialize temporary test buffer and SD card data buffer
+ 589   1              l_uc_temporary_data_buffer_p    = g_uc_temporary_data_buffer;
+ 590   1      
+ 591   1              //Check other buffer size (other than normal SD_CARD_BUFFER_SIZE)
+ 592   1              if (l_uc_array_p == g_uc_temporary_data_buffer) l_us_buffer_size = MAX_SD_CARD_BLOCK_CONTENT_SIZE;
+ 593   1      
+ 594   1              //Set current block to 1
+ 595   1              g_us_sd_header_no_of_this_block = 1;
+ 596   1      
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 11  
+
+ 597   1              //Set block property to be on-going data set now, so long as this function does not go out from the main 
+             -loop,
+ 598   1              //the block property will always be on-going
+ 599   1              g_us_sd_header_block_property = 0x0100;
+ 600   1      
+ 601   1              //Initialize SD card block data size as SD_CARD_HEADER_SIZE, which is the initial length for any SD card 
+             -block data writing
+ 602   1              g_us_sd_header_this_block_data_size = SD_CARD_HEADER_SIZE;
+ 603   1          
+ 604   1              //Main loop to save every data type given
+ 605   1              for (l_uc_counter = 0; l_uc_counter < g_uc_no_of_data_saved; l_uc_counter++){
+ 606   2      
+ 607   2                      //Test case to calculate length of a set of data
+ 608   2                      l_us_current_data_set_length = fillData(l_uc_temporary_data_buffer_p,0,*(l_uc_data_type_saved_buffer_p+l
+             -_uc_counter),0);
+ 609   2                      l_us_total_to_be_data_length = g_us_sd_header_this_block_data_size + l_us_current_data_set_length;
+ 610   2      
+ 611   2                      //If the total to be data length is not within allowed length: MAX_SD_CARD_BLOCK_CONTENT_SIZE + SD_CARD_
+             -HEADER_SIZE
+ 612   2                      if (l_us_total_to_be_data_length > MAX_SD_CARD_BLOCK_CONTENT_SIZE + SD_CARD_HEADER_SIZE){
+ 613   3                              //Save the data stored in the buffer to the specified SD card block
+ 614   3                              l_us_error_code = storeInSDCard(l_uc_array_p,l_us_buffer_size);
+ 615   3      
+ 616   3                              //Increase no of this block for the next saving
+ 617   3                              g_us_sd_header_no_of_this_block++;
+ 618   3      
+ 619   3                              //Reset current block data size to the original size = SD_CARD_HEADER_SIZE
+ 620   3                              //The size of g_us_sd_header_this_block_data_size would be changed when 'else' case occurs.
+ 621   3                              //Therefore, here g_us_sd_header_this_block_data_size is reset.
+ 622   3                              g_us_sd_header_this_block_data_size = SD_CARD_HEADER_SIZE;
+ 623   3      
+ 624   3                              //Fill SD card data buffer with this current data set, update its array index pointer
+ 625   3                              g_us_sd_header_this_block_data_size = fillData(l_uc_array_p,g_us_sd_header_this_block_data_size,*(l_uc_
+             -data_type_saved_buffer_p+l_uc_counter),0);
+ 626   3                      }
+ 627   2                      else {//If the total to be data length is within the allowed length
+ 628   3                              //Fill SD card data buffer with this current data set, update its array index pointer
+ 629   3                              g_us_sd_header_this_block_data_size = fillData(l_uc_array_p,g_us_sd_header_this_block_data_size,*(l_uc_
+             -data_type_saved_buffer_p+l_uc_counter),0);
+ 630   3                      }
+ 631   2              }
+ 632   1      
+ 633   1              //When the loop ends, all data must have been stored in the SD card, except the last one in the SD card b
+             -uffer
+ 634   1              //Update block property to be end data set now
+ 635   1              g_us_sd_header_block_property = 0x0200;
+ 636   1      
+ 637   1              //Save the data stored in the buffer to the specified SD card block
+ 638   1          l_us_error_code = storeInSDCard(l_uc_array_p, l_us_buffer_size);
+ 639   1              //dec28_yc in case write unable to end properly, it is still possible to continue, as long as SD card doe
+             -s not hang.
+ 640   1              l_us_error_code=initSD();
+ 641   1      
+ 642   1              //Return no of this block, which is the number of block used for the whole saving process
+ 643   1              return l_us_error_code;
+ 644   1      }
+ 645          
+ 646          //------------------------------------------------------------------------------------
+ 647          // To store data of a subsystem in the SD card
+ 648          //------------------------------------------------------------------------------------
+ 649          // This function is to save a set of data to the SD card. There are several types of 
+ 650          // data that we can save in the SD card. They are as follow:
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 12  
+
+ 651          //      1) Housekeeping data: OBDH, PWRS, ADCS, COMM, PAYL
+ 652          //      2) OBDH Housekeeping block pointers: will be saved per orbit AND per latest state
+ 653          //      3) OBDH latest state (periodical saving)
+ 654          //      4) OBDH schedule
+ 655          //
+ 656          // Storing steps:
+ 657          //      1) Write main information to the SD card buffer
+ 658          //      2) Write header to the SD card buffer
+ 659          //      3) Calculate and write CRC16 to the SD card buffer
+ 660          //      4) Write zero for the remaining elements in the SD card buffer
+ 661          //      5) Write SD card buffer to SD card block
+ 662          //------------------------------------------------------------------------------------
+ 663          unsigned short storeInSDCard(unsigned char *l_uc_array_p, unsigned short l_us_buffer_size)
+ 664          {
+ 665   1              unsigned short l_us_error_code;
+ 666   1              unsigned char l_uc_i;
+ 667   1              unsigned short l_us_counter = 0;
+ 668   1              unsigned short l_us_data_counter = 0x0000;
+ 669   1      
+ 670   1              //------------------------------------------------------------------------------------
+ 671   1              //Create header & checksum
+ 672   1              //Store block information
+ 673   1              //Store no of block used
+ 674   1              //Store no of this block
+ 675   1              //Store msg ended information
+ 676   1              //Store first block pointer address
+ 677   1              //Store satellite time & orbit when this block is saved
+ 678   1              //Store original block address (also in the copy block, only original block address is stored)
+ 679   1              //But there is another useful information, that is
+ 680   1              //Time and orbit when the latest housekeeping is taken, but that should be
+ 681   1              //provided in the content of the SD card, not the header
+ 682   1              l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_SD_HEADER,0);
+ 683   1      
+ 684   1              //Set the unused header bytes to zero
+ 685   1              for (l_us_counter = l_us_data_counter; l_us_counter < 0x0020; l_us_counter++)
+ 686   1                      *(l_uc_array_p + l_us_counter) = 0x00;
+ 687   1              //------------------------------------------------------------------------------------
+ 688   1      
+ 689   1              #if (CRC_ENABLE == 1)
+ 690   1              //------------------------------------------------------------------------------------
+ 691   1              //Add checksum bytes
+ 692   1              if (CHECKSUM_DEFAULT & 0x40)    //If checksum default method is 16-bit
+ 693   1                      insertCRC16(l_uc_array_p,g_us_sd_header_this_block_data_size);
+ 694   1      
+ 695   1              //Set all other bytes in the write buffer to zero
+ 696   1              for (l_us_counter = g_us_sd_header_this_block_data_size+2; l_us_counter < l_us_buffer_size; l_us_counter+
+             -+)
+ 697   1                      *(l_uc_array_p + l_us_counter) = 0x00;
+ 698   1              #else
+                      for (l_us_counter = g_us_sd_header_this_block_data_size; l_us_counter < l_us_buffer_size; l_us_counter++)
+                              *(l_uc_array_p + l_us_counter) = 0x00;
+                      #endif
+ 702   1                      
+ 703   1              //------------------------------------------------------------------------------------
+ 704   1      
+ 705   1              //------------------------------------------------------------------------------------
+ 706   1              //Write to SD card
+ 707   1              l_us_error_code = sdWriteSingleBlock(g_ul_sd_header_sd_write_block,l_uc_array_p,l_us_buffer_size);
+ 708   1              g_ul_sd_header_sd_write_block++;
+ 709   1      
+ 710   1              //Copy multiple times
+ 711   1              for (l_uc_i = 0; l_uc_i < g_uc_no_of_copies; l_uc_i++){
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 13  
+
+ 712   2                      //Change the block property to indicate copy
+ 713   2                      *(l_uc_array_p+3) = l_uc_i+1;
+ 714   2      
+ 715   2                      #if (CRC_ENABLE == 1)
+ 716   2                      //Write new checksum bytes for copy     block
+ 717   2                      if (CHECKSUM_DEFAULT & 0x40)    //If checksum default method is 16-bit
+ 718   2                              insertCRC16(l_uc_array_p,g_us_sd_header_this_block_data_size);
+ 719   2                      #endif
+ 720   2      
+ 721   2                      //Write the copy to the SD card block
+ 722   2                      l_us_error_code = sdWriteSingleBlock(g_ul_sd_header_sd_write_block,l_uc_array_p,l_us_buffer_size);
+ 723   2                      g_ul_sd_header_sd_write_block++;
+ 724   2              }  
+ 725   1              
+ 726   1              return l_us_error_code;
+ 727   1      }
+ 728          
+ 729          //------------------------------------------------------------------------------------
+ 730          // To save data with protection feature (creating multiple copies of the data)
+ 731          //------------------------------------------------------------------------------------
+ 732          unsigned short saveDataProtected (unsigned char l_uc_subsystem, unsigned char l_uc_data_type, unsigned cha
+             -r *l_uc_array_p)
+ 733          {
+ 734   1              unsigned short l_us_error_code;
+ 735   1              unsigned char l_uc_previous_sd_header_subsystem;
+ 736   1              unsigned char l_uc_previous_sd_header_data_type;
+ 737   1      
+ 738   1              //If storing data hold is not activated, proceeds. Else, returns error code
+ 739   1              if (!(g_uc_strsnd_flag & STRNG_FLAG_SAVE_DATA_HOLD)){
+ 740   2                      //Save the previous SD header subsystem and data type
+ 741   2                      //This is to prevent lose of data when loading
+ 742   2                      //Hence saving process can NEVER use g_sd_header_subsystem 
+ 743   2                      //and g_uc_sd_header_data_type as inputs
+ 744   2                      l_uc_previous_sd_header_subsystem = g_uc_sd_header_subsystem;
+ 745   2                      l_uc_previous_sd_header_data_type = g_uc_sd_header_data_type;
+ 746   2      
+ 747   2                      //Initialize global variable to save the data
+ 748   2                      g_uc_sd_header_subsystem = l_uc_subsystem;
+ 749   2                      g_uc_sd_header_data_type = l_uc_data_type;      
+ 750   2              
+ 751   2                      //Call init save data to handle data allocation
+ 752   2                      l_us_error_code = initSDData();
+ 753   2              
+ 754   2                      //Proceeds if there is no error code in data saving
+ 755   2                      if (!l_us_error_code){
+ 756   3                              //Save data based on initialization
+ 757   3                              //Get the number of block used to save the data
+ 758   3                              l_us_error_code = saveData(l_uc_array_p);
+ 759   3                      
+ 760   3                              //To handle block pointer updates after saving data process
+ 761   3                              saveDataEndHandler(g_ul_sd_header_sd_write_block);
+ 762   3                      }
+ 763   2      
+ 764   2                      //Restore the previous g_uc_sd_header_subsystem and g_uc_sd_header_data_type
+ 765   2                      g_uc_sd_header_subsystem = l_uc_previous_sd_header_subsystem;
+ 766   2                      g_uc_sd_header_data_type = l_uc_previous_sd_header_data_type;   
+ 767   2              }
+ 768   1              else l_us_error_code = EC_SAVING_DATA_IS_DISABLED;
+ 769   1      
+ 770   1              return l_us_error_code;
+ 771   1      }
+ 772          
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 14  
+
+ 773          //------------------------------------------------------------------------------------
+ 774          // To handle block pointer updates after saving process
+ 775          //------------------------------------------------------------------------------------
+ 776          void saveDataEndHandler (unsigned long l_ul_new_bp)
+ 777          {
+ 778   1              unsigned char l_uc_overwriting_flag = 0;
+ 779   1      
+ 780   1              //To handle block pointer handler after saving process for various data sets property
+ 781   1              //------------------------------------------------------------------------------------
+ 782   1              if (g_uc_data_sets_property & 0x01){    //If the write pointer is a variable
+ 783   2                      //Update the value of that variable to follow the new bp value
+ 784   2                      *g_ul_initial_sd_card_bp_address = l_ul_new_bp;
+ 785   2      
+ 786   2                      //If the updated value is beyond allowed, rise the overwriting flag and 
+ 787   2                      //Set the pointer to its original value
+ 788   2                      if ((*g_ul_initial_sd_card_bp_address) > g_ul_memory_address_upper_limit){
+ 789   3                              *g_ul_initial_sd_card_bp_address = g_ul_memory_address_lower_limit;
+ 790   3                              l_uc_overwriting_flag = 0x01;
+ 791   3                      }
+ 792   2              }
+ 793   1              //------------------------------------------------------------------------------------
+ 794   1      
+ 795   1              //------------------------------------------------------------------------------------
+ 796   1              if (g_uc_data_sets_property & 0x02)     //If the memory space is looping
+ 797   1                      if (l_uc_overwriting_flag) //If overwriting flag is raised, increase overwritten value
+ 798   1                              (*g_uc_no_of_overwritten_p)++;
+ 799   1              //------------------------------------------------------------------------------------  
+ 800   1      }
+ 801          
+ 802          //------------------------------------------------------------------------------------
+ 803          // Attempt to save the current state of the satellite
+ 804          //------------------------------------------------------------------------------------
+ 805          void saveState (void)
+ 806          {
+ 807   1              #if (SAVE_STATE_ENABLE == 1)
+ 808   1              //dec28_yc
+ 809   1              unsigned short l_us_error_code = EC_SUCCESSFUL;
+ 810   1              if(!l_us_error_code) l_us_error_code = saveDataProtected(ALL_SUBSYSTEMS, SD_ESSENTIAL, g_uc_sd_data_buffe
+             -r);
+ 811   1              if(!l_us_error_code) l_us_error_code = saveDataProtected(OBDH_SUBSYSTEM, SD_SCHEDULE, g_uc_sd_data_buffer
+             -);
+ 812   1              if(!l_us_error_code) l_us_error_code = saveDataProtected(OBDH_SUBSYSTEM, SD_SCRIPT, g_uc_sd_data_buffer);
+ 813   1              #if (EVENT_HANDLER_ENABLE == 1)
+ 814   1              eventHandler(EV_SAVE_STATE+l_us_error_code,0,0,0,0,0,0);
+ 815   1              #endif
+ 816   1              #endif
+ 817   1      }
+ 818          
+ 819          //------------------------------------------------------------------------------------
+ 820          // To load data with protection feature (creating multiple copies of the data)
+ 821          //------------------------------------------------------------------------------------
+ 822          // returns non CRC-Free SDdata of relevant pg to g_uc_sd_data_buffer
+ 823          // if (g_uc_strsnd_flag & STRNG_FLAG_SAVE_DATA_HOLD), 
+ 824          // allows for l_ul_start_block_num = 0, l_ul_end_block_num = 0 
+ 825          //------------------------------------------------------------------------------------
+ 826          unsigned short loadDataProtected (unsigned char l_uc_subsystem, unsigned char l_uc_data_type, unsigned lon
+             -g l_ul_start_block_num, unsigned long l_ul_end_block_num)
+ 827          {
+ 828   1              unsigned short l_us_error_code = EC_INIT;
+ 829   1              unsigned char l_uc_i = 0;
+ 830   1              unsigned short l_us_msg_length;         
+ 831   1      
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 15  
+
+ 832   1              //Initialize global variable to load the data
+ 833   1              //Differs from saveDataProtected, loadDataProtected inputs,
+ 834   1              //although ideally should not NEVER be put as g_uc_sd_header_subsystem
+ 835   1              //and g_uc_sd_header_data_type respectively, can handle the case
+ 836   1              g_uc_sd_header_subsystem = l_uc_subsystem;
+ 837   1              g_uc_sd_header_data_type = l_uc_data_type;
+ 838   1              
+ 839   1              //Call init data to handle data allocation
+ 840   1              if (initSDData()) return EC_INVALID_LOADING_DATA_REQUEST;
+ 841   1      
+ 842   1              //If storing data hold is not activated, proceeds. Else, returns error code
+ 843   1              if(g_uc_sd_load_data_timeout_counter >= TIME_LIMIT_LOAD_DATA_S){                        
+ 844   2              //      this is NEW read. update to global variables
+ 845   2                      g_uc_sd_load_data_timeout_counter               = 0;
+ 846   2                      g_ul_start_sd_card_load_bp              = l_ul_start_block_num;
+ 847   2                      g_ul_end_sd_card_load_bp                = l_ul_end_block_num;
+ 848   2                      g_uc_strsnd_flag |= (g_ul_end_sd_card_load_bp < g_ul_start_sd_card_load_bp)? (g_uc_data_sets_property & 
+             -STRNG_FLAG_SD_LOAD_OVERWRITTEN):0;    //If the memory space is looping
+ 849   2                      g_uc_strsnd_flag &= ~STRNG_FLAG_SD_LOAD_COMPLETED;
+ 850   2              }       
+ 851   1      
+ 852   1              //Continue...  check weather valid g_ul_start_sd_card_load_bp. CAN BE INVALID if we are continuing read b
+             -ut calling Func asks for different l_uc_subsystem set.
+ 853   1              if (g_ul_start_sd_card_load_bp < g_ul_memory_address_lower_limit || g_ul_start_sd_card_load_bp > g_ul_mem
+             -ory_address_end)      //invalid
+ 854   1                      return EC_INVALID_LOADING_DATA_REQUEST;
+ 855   1                      
+ 856   1              //Continue...  check weather valid g_ul_end_sd_card_load_bp. CAN BE INVALID if we are continuing read but
+             - calling Func asks for different l_uc_subsystem set.
+ 857   1              if (g_ul_end_sd_card_load_bp < g_ul_memory_address_lower_limit || g_ul_end_sd_card_load_bp > g_ul_memory_
+             -address_end)        //invalid
+ 858   1                      return EC_INVALID_LOADING_DATA_REQUEST;
+ 859   1      
+ 860   1              //Continue if no error
+ 861   1              for (l_uc_i = 0; l_uc_i <= g_uc_no_of_copies; l_uc_i++){
+ 862   2                      //next block to try to read
+ 863   2                      //Ian (2012-05-15): l_ul_read_address is removed
+ 864   2                      l_us_error_code = sdReadSingleBlock(g_ul_start_sd_card_load_bp + l_uc_i);
+ 865   2      
+ 866   2                      l_us_msg_length = (unsigned short)(g_uc_sd_data_buffer[6] << 8) + g_uc_sd_data_buffer[7] + 1;
+ 867   2      
+ 868   2                      //If this block data size is greater than allowed, return error code
+ 869   2                      if (l_us_msg_length > MAX_SD_CARD_BLOCK_CONTENT_SIZE + SD_CARD_HEADER_SIZE) 
+ 870   2                              l_us_error_code = EC_NO_DATA_STORED_IN_THIS_BLOCK;
+ 871   2      
+ 872   2                      //Check if msg length is less than SD card header size, return error code
+ 873   2                      if (l_us_msg_length < SD_CARD_HEADER_SIZE)
+ 874   2                              l_us_error_code = EC_NO_DATA_STORED_IN_THIS_BLOCK;
+ 875   2      
+ 876   2                      #if (CRC_ENABLE == 1)
+ 877   2                      //check for data integrity
+ 878   2                      if (!l_us_error_code)
+ 879   2                              if(checkCRC16Match(g_uc_sd_data_buffer,l_us_msg_length) == EC_SUCCESSFUL)       
+ 880   2                                      break;
+ 881   2                      #endif
+ 882   2      
+ 883   2                      //If it reaches this point, it means the data must have been all corrupted
+ 884   2                      if (l_uc_i == g_uc_no_of_copies) l_us_error_code = EC_SD_ALL_STORED_DATA_IS_CORRUPTED;
+ 885   2              }//exit from loop due to no more copies to try or sucessful. Might contain error if last try not sucessfu
+             -l. But better wrong data than no data (YC).
+ 886   1              //Ian: No, of course no data is safer than wrong data =.='
+ 887   1              //If CRC fails, the loop will break. But if all data are corrupted, the loop will continue until the end 
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 16  
+
+             -and indicates that
+ 888   1              //all stored data are corrupted
+ 889   1                                              
+ 890   1              //update g_ul_start_sd_card_load_bp to next reading for the original blocks, skip the copies
+ 891   1              g_ul_start_sd_card_load_bp += (g_uc_no_of_copies + 1);
+ 892   1              
+ 893   1              //over size limit condition && //check g_us_sd_header_block_property for end
+ 894   1              if (g_ul_start_sd_card_load_bp > g_ul_memory_address_upper_limit && ((g_uc_sd_data_buffer[2] & 0x02) == 0
+             -x02)){        
+ 895   2                      g_ul_start_sd_card_load_bp = g_ul_memory_address_lower_limit;
+ 896   2                      g_uc_strsnd_flag &= ~STRNG_FLAG_SD_LOAD_OVERWRITTEN;    
+ 897   2              }               
+ 898   1      
+ 899   1              //Reset storing data hold activation timeout whenever this function is called within 30 seconds
+ 900   1              g_uc_sd_load_data_timeout_counter = 0;
+ 901   1              
+ 902   1              //FULL READ completed... reload load data timeout value
+ 903   1              //check g_us_sd_header_block_property for end
+ 904   1              if(g_ul_start_sd_card_load_bp > g_ul_end_sd_card_load_bp && !(g_uc_strsnd_flag & STRNG_FLAG_SD_LOAD_OVERW
+             -RITTEN) && ((g_uc_sd_data_buffer[2] & 0x02) == 0x02)){        
+ 905   2                      g_uc_sd_load_data_timeout_counter = TIME_LIMIT_LOAD_DATA_S;
+ 906   2                      g_uc_strsnd_flag |= STRNG_FLAG_SD_LOAD_COMPLETED;
+ 907   2              }                                       
+ 908   1      
+ 909   1              return l_us_error_code;
+ 910   1      } 
+ 911          
+ 912          //------------------------------------------------------------------------------------
+ 913          // To load the latest state
+ 914          //------------------------------------------------------------------------------------
+ 915          void loadState (void)
+ 916          {
+ 917   1              #if (LOAD_STATE_ENABLE == 1)
+ 918   1              
+ 919   1              unsigned short l_us_error_code = EC_INIT;
+ 920   1              unsigned char *l_uc_array_p;
+ 921   1      
+ 922   1              //Set pointer to SD data buffer
+ 923   1              l_uc_array_p = g_uc_sd_data_buffer;
+ 924   1      
+ 925   1              //Load the latest SD essential block
+ 926   1              l_us_error_code = loadDataProtected(ALL_SUBSYSTEMS, SD_ESSENTIAL, SD_BP_OBDH_ESS_START, SD_BP_OBDH_ESS_ST
+             -ART);
+ 927   1      
+ 928   1              //Proceeds if there is no error code
+ 929   1              if (!l_us_error_code){
+ 930   2                      //Set initial value for l_us_data_counter
+ 931   2                      g_us_data_counter = SD_CARD_HEADER_SIZE;
+ 932   2      
+ 933   2                      //Update OBDH essential data
+ 934   2                      updateOBDHEssential(l_uc_array_p);
+ 935   2      
+ 936   2                      //Next step, load schedule
+ 937   2                      l_us_error_code = loadSchedule(l_uc_array_p);  //dec28_yc
+ 938   2      
+ 939   2                      //Next step, load scripspace
+ 940   2                      if (!l_us_error_code) l_us_error_code = loadScriptspace(l_uc_array_p);//dec28_yc
+ 941   2              }
+ 942   1              #if (EVENT_HANDLER_ENABLE == 1)
+ 943   1              eventHandler(EV_LOAD_STATE+l_us_error_code,0,0,0,0,0,0); //dec28_yc
+ 944   1              #endif
+ 945   1      
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 17  
+
+ 946   1              #endif
+ 947   1      }
+ 948          
+ 949          #if (LOAD_STATE_ENABLE == 1)
+ 950          //------------------------------------------------------------------------------------
+ 951          // To load schedule with better efficiency
+ 952          //------------------------------------------------------------------------------------
+ 953          //dec28_yc changes to loadSchedule & loadScriptspace to include return EC_CODES
+ 954          unsigned short loadSchedule (unsigned char *l_uc_array_p)
+ 955          {
+ 956   1              unsigned short l_us_error_code = EC_INIT; //dec28_yc
+ 957   1              unsigned char l_uc_no_of_loading = 0;
+ 958   1              unsigned char l_uc_i;
+ 959   1              unsigned char l_uc_j;
+ 960   1              unsigned char l_uc_k;
+ 961   1              unsigned char l_uc_last_no_of_schedule_loaded;
+ 962   1              unsigned char l_uc_no_of_schedule_loaded;
+ 963   1      
+ 964   1              //Depends on how many maximum schedule is there, we can calculate no of loading needed
+ 965   1              l_uc_no_of_loading = (SCHEDULER_BLOCK_SIZE+19)/20;
+ 966   1      
+ 967   1              //Get the no of schedule needs to be loaded for the last time loading
+ 968   1              l_uc_last_no_of_schedule_loaded = SCHEDULER_BLOCK_SIZE%20;
+ 969   1      
+ 970   1              //Load the SD card that amount of time
+ 971   1              for (l_uc_i = 0; l_uc_i < l_uc_no_of_loading; l_uc_i++){
+ 972   2                      //Load block of the schedule, redundant computation SD_BP_OBDH_SCHEDULE_START+l_uc_i*(NO_OF_COPIES_SD_SC
+             -HEDULE+1) is noticed.
+ 973   2                      l_us_error_code = loadDataProtected(OBDH_SUBSYSTEM, SD_SCHEDULE, SD_BP_OBDH_SCHEDULE_START+l_uc_i*(NO_OF
+             -_COPIES_SD_SCHEDULE+1), SD_BP_OBDH_SCHEDULE_START+l_uc_i*(NO_OF_COPIES_SD_SCHEDULE+1));
+ 974   2              
+ 975   2                      //if there is no error code, proceeds
+ 976   2                      if (!l_us_error_code){
+ 977   3                              //Reset global data counter
+ 978   3                              g_us_data_counter = SD_CARD_HEADER_SIZE;
+ 979   3      
+ 980   3                              //Get the schdule's block size (only for the 1st time)
+ 981   3                              if (l_uc_i == 0) str_obdh_hk.uc_scheduler_block_size = *(l_uc_array_p+g_us_data_counter++);
+ 982   3      
+ 983   3                              //Get 20 schedule or less at once
+ 984   3                              l_uc_no_of_schedule_loaded = (l_uc_i < l_uc_no_of_loading-1) ? 20 : l_uc_last_no_of_schedule_loaded; 
+ 985   3      
+ 986   3                              //Loop to get the schedule
+ 987   3                              for (l_uc_j = 0; l_uc_j < l_uc_no_of_schedule_loaded; l_uc_j++){
+ 988   4                                      str_scheduler.uc_reindexing[l_uc_i*20+l_uc_j] = *(l_uc_array_p+g_us_data_counter++);
+ 989   4                                      str_scheduler.ul_scheduled_time[l_uc_i*20+l_uc_j] = insertArrayToLongGC(l_uc_array_p);
+ 990   4                                      str_scheduler.us_cmd[l_uc_i*20+l_uc_j] = insertArrayToShortGC(l_uc_array_p);
+ 991   4                                      str_scheduler.uc_arg_length[l_uc_i*20+l_uc_j] = *(l_uc_array_p+g_us_data_counter++);
+ 992   4                                      for (l_uc_k = 0; l_uc_k < MAX_SCHEDULER_ARG; l_uc_k++)
+ 993   4                                              str_scheduler.uc_arg[l_uc_i*20+l_uc_j][l_uc_k] = *(l_uc_array_p+g_us_data_counter++);
+ 994   4                              }
+ 995   3                      }
+ 996   2              } 
+ 997   1              return l_us_error_code;         //dec28_yc
+ 998   1      }
+ 999          
+1000          //------------------------------------------------------------------------------------
+1001          // To load scriptspace
+1002          //------------------------------------------------------------------------------------
+1003          unsigned short loadScriptspace (unsigned char *l_uc_array_p)
+1004          {
+1005   1              unsigned short l_us_error_code = EC_INIT;       //dec28_yc
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 18  
+
+1006   1              unsigned short l_us_no_of_data_byte = 0;
+1007   1              unsigned char l_uc_i;
+1008   1              unsigned char l_uc_j;
+1009   1              unsigned char l_uc_k;
+1010   1      
+1011   1              //Depends on how many maximum scriptspace is there, we can calculate no of loading needed
+1012   1              l_us_no_of_data_byte = (SCRIPTSPACE_SIZE*MAX_SCRIPTLINE_SIZE*MAX_SCRIPT_LENGTH) + TASK_SIZE;
+1013   1      
+1014   1              //So long as the no of data byte is less than certain threshold, this condition will always be true
+1015   1              //Else, more code will be needed
+1016   1              if (l_us_no_of_data_byte <= MAX_SD_CARD_BLOCK_CONTENT_SIZE){
+1017   2                      //Load block of the scriptspace
+1018   2                      l_us_error_code = loadDataProtected(OBDH_SUBSYSTEM, SD_SCRIPT, SD_BP_OBDH_SCRIPT_START, SD_BP_OBDH_SCRIP
+             -T_START);
+1019   2              
+1020   2                      //if there is no error code, proceeds
+1021   2                      if (!l_us_error_code){
+1022   3                              //Reset global data counter
+1023   3                              g_us_data_counter = SD_CARD_HEADER_SIZE;
+1024   3      
+1025   3                              //Get the scriptspace of the tasks
+1026   3                              for (l_uc_i = 0; l_uc_i < TASK_SIZE; l_uc_i++)
+1027   3                                      str_task[l_uc_i].uc_scriptspace =  *(l_uc_array_p+g_us_data_counter++);
+1028   3      
+1029   3                              //Fill the scriptspaces
+1030   3                              //The scriptspace is written when saveDataProtected is called with inputs
+1031   3                              //(g_uc_sd_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_sd_header_data_type == SD_SCRIPT)
+1032   3                              for (l_uc_i = 0; l_uc_i < SCRIPTSPACE_SIZE; l_uc_i++)
+1033   3                                      for (l_uc_j = 0; l_uc_j < MAX_SCRIPTLINE_SIZE; l_uc_j++)
+1034   3                                              for (l_uc_k = 0; l_uc_k < MAX_SCRIPT_LENGTH; l_uc_k++)
+1035   3                                                      str_scriptspace[l_uc_i].uc_script[l_uc_j][l_uc_k] = *(l_uc_array_p + g_us_data_counter++);
+1036   3                      }
+1037   2              }
+1038   1              return l_us_error_code;   //dec28_yc
+1039   1      }
+1040          #endif
+1041          
+1042          //------------------------------------------------------------------------------------
+1043          // To update OBDH essential from an array using global data counter
+1044          //------------------------------------------------------------------------------------
+1045          // It is noted that the design of updateOBDHEssential() allows input from any array
+1046          //------------------------------------------------------------------------------------
+1047          void updateOBDHEssential (unsigned char *l_uc_array_p)
+1048          {
+1049   1              unsigned short l_us_counter_i;
+1050   1      
+1051   1              #if (PWRS_CMD_ENABLE == 1)
+1052   1              //Set as if there is I2C msg to get PWRS SSCP
+1053   1              g_uc_i2c_msg_out = PWRS_I2C_GET_SSCP;
+1054   1      
+1055   1              //Load PWRS SSCP
+1056   1              storePWRS(l_uc_array_p);
+1057   1              #endif
+1058   1      
+1059   1              #if (ADCS_CMD_ENABLE == 1)
+1060   1              //Set as if there is I2C msg to get ADCS SSCP
+1061   1              g_uc_i2c_msg_out = ADCS_I2C_GET_SSCP;
+1062   1      
+1063   1              //Load ADCS SSCP
+1064   1              storeADCS(l_uc_array_p);
+1065   1              #endif
+1066   1      
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 19  
+
+1067   1              //Load OBDH various data
+1068   1              updateOBDHSSCP(l_uc_array_p);
+1069   1              updateOBDHSelectedHK(l_uc_array_p);
+1070   1              updateOBDHSelectedData(l_uc_array_p);
+1071   1              updateOBDHBP(l_uc_array_p);
+1072   1      
+1073   1              #if (TIME_ENABLE == 1)
+1074   1              //Load SAT_DATE_INIT
+1075   1              str_sat_date.uc_init_day_of_month = *(l_uc_array_p + g_us_data_counter++);
+1076   1              str_sat_date.uc_init_month = *(l_uc_array_p + g_us_data_counter++);
+1077   1              str_sat_date.uc_init_year = *(l_uc_array_p + g_us_data_counter++);
+1078   1              str_sat_date.uc_init_hour = *(l_uc_array_p + g_us_data_counter++);
+1079   1              str_sat_date.uc_init_min = *(l_uc_array_p + g_us_data_counter++);
+1080   1              str_sat_date.uc_init_s = *(l_uc_array_p + g_us_data_counter++);
+1081   1              str_sat_date.us_init_ms = insertArrayToShortGC(l_uc_array_p);
+1082   1              #endif
+1083   1      
+1084   1              //Load from to callsign
+1085   1              for (l_us_counter_i = 0; l_us_counter_i < AX25_CALLSIGN_SIZE; l_us_counter_i++) 
+1086   1                      g_uc_from_to_callsign[l_us_counter_i] = *(l_uc_array_p + g_us_data_counter++);
+1087   1      
+1088   1      }
+1089          
+1090          //------------------------------------------------------------------------------------
+1091          // To update OBDH SSCP from an array using global data counter
+1092          //------------------------------------------------------------------------------------
+1093          void updateOBDHSSCP (unsigned char *l_uc_array_p)
+1094          {
+1095   1              unsigned short l_us_counter_i;
+1096   1      
+1097   1              str_obdh_par.uc_manual_control_enabled = *(l_uc_array_p + g_us_data_counter++);
+1098   1              str_obdh_par.uc_no_of_interrupt_per_s = *(l_uc_array_p + g_us_data_counter++);
+1099   1              str_obdh_par.uc_gsch_time_window_10s = *(l_uc_array_p + g_us_data_counter++);
+1100   1              for (l_us_counter_i = 0; l_us_counter_i < NO_OF_SOC_THRESHOLD_PAR; l_us_counter_i++)                    
+1101   1                      str_obdh_par.uc_soc_threshold[l_us_counter_i] = *(l_uc_array_p + g_us_data_counter++);
+1102   1              str_obdh_par.us_rev_time_s = insertArrayToShortGC(l_uc_array_p);
+1103   1              for (l_us_counter_i = 0; l_us_counter_i < MAX_NO_OF_DATA_TYPE_LOGGED; l_us_counter_i++)
+1104   1                      str_obdh_par.us_log_data_id[l_us_counter_i] = insertArrayToShortGC(l_uc_array_p);
+1105   1              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+1106   1                      str_obdh_par.us_br_threshold_low[l_us_counter_i] = insertArrayToShortGC(l_uc_array_p);
+1107   1              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+1108   1                      str_obdh_par.us_br_threshold_high[l_us_counter_i] = insertArrayToShortGC(l_uc_array_p);
+1109   1              for (l_us_counter_i = 0; l_us_counter_i < NO_OF_BEACON_INTERVAL; l_us_counter_i++)
+1110   1                      str_obdh_par.uc_beacon_interval[l_us_counter_i] = *(l_uc_array_p + g_us_data_counter++);
+1111   1              str_obdh_par.ul_det_uptime_limit_s = insertArrayToLongGC(l_uc_array_p);
+1112   1      }
+1113          
+1114          //------------------------------------------------------------------------------------
+1115          // To update OBDH Selected HK from an array using global data counter
+1116          //------------------------------------------------------------------------------------
+1117          void updateOBDHSelectedHK (unsigned char *l_uc_array_p)
+1118          {
+1119   1              str_obdh_hk.uc_sat_mode = *(l_uc_array_p + g_us_data_counter++);
+1120   1              str_obdh_hk.ul_wod_sample_count = insertArrayToLongGC(l_uc_array_p);
+1121   1              str_obdh_hk.uc_scheduler_block_size = *(l_uc_array_p + g_us_data_counter++);
+1122   1              str_obdh_hk.us_beacon_flag = insertArrayToShortGC(l_uc_array_p);
+1123   1              str_obdh_hk.us_cw_char_rate_par = insertArrayToShortGC(l_uc_array_p);
+1124   1              str_obdh_hk.uc_ax25_bit_rate_par = *(l_uc_array_p + g_us_data_counter++);
+1125   1              str_obdh_hk.uc_mcu_rst_count = *(l_uc_array_p + g_us_data_counter++);
+1126   1              str_obdh_hk.ul_data_byte_sent = insertArrayToLongGC(l_uc_array_p);
+1127   1      
+1128   1              #if (SATELLITE_MODE_HANDLER_ENABLE == 1)
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 20  
+
+1129   1              //Only M2, M3, and M5 modes are valid for the first initialization
+1130   1              if (str_obdh_hk.uc_sat_mode >= SATELLITE_MODE_M5) enterM5();
+1131   1              else if ((str_obdh_hk.uc_sat_mode == SATELLITE_MODE_M3) || (str_obdh_hk.uc_sat_mode == SATELLITE_MODE_M4)
+             -) enterM3();
+1132   1              #endif
+1133   1      
+1134   1              //Keep the auto-beacon disabling flag. Reset the rests.
+1135   1              str_obdh_hk.us_beacon_flag &= BEACON_FLAG_AUTO_BEACON_DISABLE;
+1136   1      }
+1137          
+1138          //------------------------------------------------------------------------------------
+1139          // To update OBDH Selected Data from an array using global data counter
+1140          //------------------------------------------------------------------------------------
+1141          void updateOBDHSelectedData (unsigned char *l_uc_array_p)
+1142          {
+1143   1              unsigned short l_us_counter_i;
+1144   1      
+1145   1              str_obdh_data.uc_sat_rstsrc = *(l_uc_array_p + g_us_data_counter++);
+1146   1              str_obdh_hk.uc_sat_rstsrc = str_obdh_data.uc_sat_rstsrc;
+1147   1              str_obdh_data.uc_sat_rstsrc = RESET_SOURCE_UNKNOWN;
+1148   1              str_obdh_data.ul_obc_time_s = insertArrayToLongGC(l_uc_array_p)+5; //Includes 5 seconds delay
+1149   1              str_obdh_data.us_current_rev_no = insertArrayToShortGC(l_uc_array_p);
+1150   1              str_obdh_data.us_rev_offset_time = insertArrayToShortGC(l_uc_array_p);
+1151   1              for (l_us_counter_i = 0; l_us_counter_i < OBDH_DATA_INTERVAL_PERIOD_SIZE; l_us_counter_i++)     
+1152   1                      str_obdh_data.us_interval_period[l_us_counter_i] = insertArrayToShortGC(l_uc_array_p);
+1153   1              str_obdh_data.uc_previous_mode = *(l_uc_array_p + g_us_data_counter++); 
+1154   1              str_obdh_data.f_gs_reference_rev_no = insertArrayToFloatGC(l_uc_array_p);
+1155   1              str_obdh_data.ul_gs_ref_time_s = insertArrayToLongGC(l_uc_array_p);
+1156   1              str_obdh_data.us_auto_reference_rev_no = insertArrayToShortGC(l_uc_array_p);
+1157   1              str_obdh_data.us_gs_reference_rev_no = insertArrayToShortGC(l_uc_array_p);
+1158   1              str_obdh_data.uc_orbit_no_changed_counter = *(l_uc_array_p + g_us_data_counter++);
+1159   1      
+1160   1              //Set the previous mode following the current mode
+1161   1              str_obdh_data.uc_previous_mode = str_obdh_hk.uc_sat_mode;
+1162   1      }
+1163          
+1164          //------------------------------------------------------------------------------------
+1165          // To update OBDH block pointers from an array using global data counter
+1166          //------------------------------------------------------------------------------------
+1167          void updateOBDHBP (unsigned char *l_uc_array_p)
+1168          {
+1169   1              str_bp.ul_hk_write_p = insertArrayToLongGC(l_uc_array_p);
+1170   1              str_bp.ul_datalog_write_p = insertArrayToLongGC(l_uc_array_p);
+1171   1              if (str_bp.ul_datalog_write_p != SD_BP_DATALOG_START) 
+1172   1                      g_us_log_data_block_size = (str_bp.ul_datalog_write_p-SD_BP_DATALOG_START)/(1+NO_OF_COPIES_SD_LOG_DATA);
+1173   1      //      str_bp.ul_package_recovery_write_p = insertArrayToLongGC(l_uc_array_p);
+1174   1              //Loading of the datalog write pointer and package recovery block pointer are not needed
+1175   1              //Therefore, they are skipped.
+1176   1              g_us_data_counter += 4;
+1177   1              str_bp.ul_eventlog_write_p = insertArrayToLongGC(l_uc_array_p);
+1178   1              str_bp.uc_hk_overwritten = *(l_uc_array_p + g_us_data_counter++);
+1179   1              str_bp.uc_orbit_indexing_overwritten = *(l_uc_array_p + g_us_data_counter++);
+1180   1      }
+1181          
+1182          //------------------------------------------------------------------------------------
+1183          // To search correct block pointer
+1184          //------------------------------------------------------------------------------------
+1185          unsigned short searchBPByOrbitInfo (unsigned char l_uc_data_type)
+1186          {   //To search the g_ul_obs_initial_bp & g_ul_obs_end_bp
+1187   1              unsigned short l_us_error_code = EC_SUCCESSFUL;
+1188   1              unsigned long l_uc_search_block;
+1189   1              unsigned long l_ul_next_orbit_bp;
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 21  
+
+1190   1              unsigned char l_uc_search_byte_num;
+1191   1              unsigned char l_uc_no_of_copies;
+1192   1               
+1193   1              //get the l_uc_search_byte_num. Please refer to fillData()::(l_us_data_type == DATA_CAT_OBDH_BP) 
+1194   1              // data type very related to this ... (g_uc_data_sets_property & 0x01)
+1195   1      
+1196   1              switch (l_uc_data_type){  
+1197   2                      //case SD_ESSENTIAL:                            return EC_INVALID_INPUT;                                                        break;
+1198   2                      case SD_HK:                                                     
+1199   2                              l_uc_no_of_copies = 2;  
+1200   2                              l_uc_search_byte_num = SD_CARD_HEADER_SIZE + 0;                 
+1201   2                              break;
+1202   2                      //case SD_IMAGE:                                        l_uc_search_byte_num=SD_CARD_HEADER_SIZE+X;                     break;
+1203   2                      //case SD_FLASH_PROGRAM:                        return EC_INVALID_INPUT;                                                        break;
+1204   2                      //case SD_BP:                                           return EC_INVALID_INPUT;                                                        break;
+1205   2                      case SD_EVENTLOG_DATA:                                                  
+1206   2                              l_uc_no_of_copies = 2;  
+1207   2                              l_uc_search_byte_num = SD_CARD_HEADER_SIZE + 12;                
+1208   2                              break;
+1209   2                      //case SD_SCHEDULE:                                     return EC_INVALID_INPUT;                                                        break;
+1210   2                      //case SD_SCRIPT:                                       return EC_INVALID_INPUT;                                                        break;
+1211   2                      //case SD_LOG_DATA:                                     l_uc_search_byte_num=SD_CARD_HEADER_SIZE+X;             break;
+1212   2                      //case SD_COMPLETE_TASK_STRUCTURE:      return EC_INVALID_INPUT;                                                        break;                                                          
+1213   2                      default:                                                        
+1214   2                              l_us_error_code = EC_INVALID_SEARCHING_INPUT;                                                   
+1215   2                              break;
+1216   2              }
+1217   1              
+1218   1              if (l_us_error_code) return l_us_error_code;
+1219   1      
+1220   1              //Check validity of the orbit request, the request must be within the current orbit
+1221   1              if ((g_us_obs_first_orbit_request <= str_obdh_data.us_current_rev_no) && (g_us_obs_last_orbit_request <= 
+             -str_obdh_data.us_current_rev_no)){
+1222   2                      // Search g_ul_load_start_address        
+1223   2                      l_uc_search_block       = SD_BP_OBDH_ORBIT_START + g_us_obs_first_orbit_request * (l_uc_no_of_copies+1);
+1224   2                      l_us_error_code         = loadDataProtected(OBDH_SUBSYSTEM,SD_BP,l_uc_search_block,l_uc_search_block); //Subjec
+             -ted to change for data with greater block no  for block pointer search
+1225   2                      if (l_us_error_code) return l_us_error_code;                    
+1226   2                      
+1227   2                      //Continue if there is no error code
+1228   2                      g_ul_obs_initial_bp = uchar2ulong(g_uc_sd_data_buffer[l_uc_search_byte_num],g_uc_sd_data_buffer[l_uc_sea
+             -rch_byte_num+1],g_uc_sd_data_buffer[l_uc_search_byte_num+2],g_uc_sd_data_buffer[l_uc_search_byte_num+3]);
+1229   2                       
+1230   2                      // Search g_ul_load_end_address
+1231   2                      if(g_us_obs_last_orbit_request >= str_obdh_data.us_current_rev_no)      
+1232   2                              g_ul_obs_end_bp = str_bp.ul_hk_write_p;
+1233   2                      else{ //SD_BP_OBDH_ORBIT_START + str_obdh_data.us_current_rev_no*(g_uc_no_of_copies+1);
+1234   3                              l_uc_search_block       = SD_BP_OBDH_ORBIT_START + (g_us_obs_last_orbit_request+1) * (l_uc_no_of_copies+1);
+1235   3                              l_us_error_code         = loadDataProtected(OBDH_SUBSYSTEM,SD_BP,l_uc_search_block,l_uc_search_block);
+1236   3                              if(l_us_error_code) return l_us_error_code;
+1237   3                              l_ul_next_orbit_bp = uchar2ulong(g_uc_sd_data_buffer[l_uc_search_byte_num],g_uc_sd_data_buffer[l_uc_sea
+             -rch_byte_num+1],g_uc_sd_data_buffer[l_uc_search_byte_num+2],g_uc_sd_data_buffer[l_uc_search_byte_num+3]);
+1238   3                              //If the next orbit block pointer is the same as the current one, just get it
+1239   3                              if (l_ul_next_orbit_bp == g_ul_obs_initial_bp)
+1240   3                                      g_ul_obs_end_bp = l_ul_next_orbit_bp;                           
+1241   3                              //Ideal case would be this, if the bp is greater than the current one
+1242   3                              else if (l_ul_next_orbit_bp > g_ul_obs_initial_bp)
+1243   3                                      g_ul_obs_end_bp = l_ul_next_orbit_bp - (l_uc_no_of_copies + 1);
+1244   3                              //The most problematic case would be if the next orbit bp is less than. This means, overflowing happens
+1245   3                              //The case is taken care by loading function. Do nothing here.
+1246   3                      }
+1247   2              
+C51 COMPILER V9.02   LUXP_STORING                                                          01/09/2014 12:21:21 PAGE 22  
+
+1248   2                      return EC_SUCCESSFUL;
+1249   2              } 
+1250   1              //If the orbit request is invalid, return error code
+1251   1              else return EC_RECORD_FOR_REQUESTED_ORBIT_DOES_NOT_EXIST;
+1252   1      
+1253   1              return l_us_error_code;
+1254   1      }
+1255          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   6207    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----     111
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,1725 @@
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 1   
+
+
+C51 COMPILER V9.02, COMPILATION OF MODULE LUXP_INIT
+NO OBJECT MODULE REQUESTED
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE luxp_init.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+*** WARNING C500 IN LINE 1 OF LUXP_INIT.C: LICENSE ERROR (R20D: CONTENT ERROR IN FLF FILE)
+
+   1          //------------------------------------------------------------------------------------
+   2          // Luxp_init.c
+   3          //------------------------------------------------------------------------------------
+   4          // Copyright (C) 2013 Nanyang Technological University.
+   5          //
+   6          // AUTH: IAN
+   7          // DATE: 03 APR 2013
+   8          //
+   9          // The program Luxp_init.c will be downloaded to the Pumpkin Motherboard with 
+  10          // C8051F120 uC as part of the VELOX-P Pico-Satellite Flight Software. 
+  11          //
+  12          // This file contains all functions related to initialization of the Flight Software
+  13          //
+  14          //------------------------------------------------------------------------------------
+  15          // Overall functional test status
+  16          //------------------------------------------------------------------------------------
+  17          // Completely tested, all fully functional
+  18          //
+  19          //------------------------------------------------------------------------------------
+  20          // Overall documentation status
+  21          //------------------------------------------------------------------------------------
+  22          // Averagely documented
+  23          //------------------------------------------------------------------------------------
+  24          
+  25          //------------------------------------------------------------------------------------
+  26          // List of functions                            | Test status                                   | Documentation
+  27          //------------------------------------------------------------------------------------
+  28          // initSystem                                           | Tested, fully functional              | Average       
+  29          // disableWdt                                           | Tested, fully functional              | Average       
+  30          // initOscillator                                       | Tested, fully functional              | Average       
+  31          // initPort                                                     | Tested, fully functional              | Average       
+  32          // initSPI                                                      | Untested                                              | Minimum
+  33          // initUart0                                            | Tested, fully functional              | Average       
+  34          // initUart1                                            | Tested, fully functional              | Average       
+  35          // initSMBus                                            | Tested, fully functional              | Average       
+  36          // initTimer1                                           | Tested, fully functional              | Average       
+  37          // initTimer2                                           | Tested, fully functional              | Average       
+  38          // initTimer3                                           | Tested, fully functional              | Average       
+  39          // initTimer4                                           | Tested, fully functional              | Average       
+  40          // initSatelliteDate                            | Tested, fully functional              | Minimum       
+  41          // initSatelliteTime                            | Tested, fully functional              | Minimum
+  42          // initMissionSchedule                          | Tested, fully functional              | Minimum       
+  43          // initCRC                                                      | Tested, fully functional              | Minimum       
+  44          //------------------------------------------------------------------------------------
+  45          
+  46          #include <luxp_init.h>
+  47          
+  48          //-----------------------------------------------------------------------------
+  49          // 16-bit SFR Definitions for 'F12x
+  50          //-----------------------------------------------------------------------------
+  51          sfr16 RCAP2     = 0xCA;         //Timer2 reload value
+  52          sfr16 TMR2      = 0xCC;         //Timer2 counter
+  53          sfr16 RCAP3     = 0xCA;         //Timer3 reload value
+  54          sfr16 TMR3      = 0xCC;         //Timer3 counter
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 2   
+
+  55          sfr16 RCAP4     = 0xCA;         //Timer4 reload value
+  56          sfr16 TMR4      = 0xCC;         //Timer4 counter
+  57          
+  58          //-----------------------------------------------------------------------------
+  59          // sbit for 'F12x
+  60          //-----------------------------------------------------------------------------
+  61          sbit MOSI       = P0^4;
+  62          sbit MISO       = P0^3;
+  63          sbit SCK        = P0^2;
+  64          sbit CS         = P0^5;
+  65          sbit ON_SD      = P4^1;
+  66          sbit ON_MHX = P4^2;
+  67          sbit OE_MHX = P4^3;
+  68          sbit OE_USB = P4^4;
+  69          
+  70          #define ON_USB 0
+  71          
+  72          //------------------------------------------------------------------------------------
+  73          // Initialization Function
+  74          //------------------------------------------------------------------------------------
+  75          
+  76          //------------------------------------------------------------------------------------
+  77          // Program Initialization: initSystem()
+  78          //------------------------------------------------------------------------------------
+  79          // Function's test result: fully functional
+  80          //------------------------------------------------------------------------------------
+  81          void initSystem (void)
+  82          {
+  83   1              disableWdt();                   //Disable Watch Dog Timer
+  84   1              initOscillator();               //Oscillator Initialization
+  85   1              initPort();                             //Port Initialization
+  86   1              initEMIF();                             //EMIF Initialization
+  87   1              initSPI();                              //SPI Initialization
+  88   1              initUart0();                    //UART0 Initialization
+  89   1              initUart1();                    //UART1 Initialization
+  90   1              initSMBus();                    //SMBus Initialization
+  91   1              #if (DEBUGGING_FEATURE == 1)
+  92   1              initTimer1();                   //Timer1 Initialization, used for UART1 timer and baudrate
+  93   1              initTimer2();                   //Timer2 Initialization, used for UART0 baudrate
+  94   1              #endif
+  95   1              initTimer3();                   //Timer3 Initialization, used for I2C timeout
+  96   1              initTimer4();                   //Timer4 Initialization, used for software timeouts
+  97   1              initA2DConverter();             //Analog-to-Digital Converter Initialization
+  98   1              EA = 1;                                 //Enable global interrupt       
+  99   1      
+ 100   1              waitS(3);                               //Do nothing for 3 second(s), who knows PWRS initiates the reset.
+ 101   1      
+ 102   1              #if (TIME_ENABLE == 1)
+ 103   1              initSatelliteDate();    //Satellite Date Initialization
+ 104   1              initSatelliteTime();    //Satellite Time Initialization
+ 105   1              #endif
+ 106   1      
+ 107   1              initSatelliteState();   //Satellite State Initialization
+ 108   1      
+ 109   1              #if (CRC_ENABLE == 1)
+ 110   1              initCRC();                              //CRC Table Initialization
+ 111   1              #endif
+ 112   1      
+ 113   1              initBlockPointer();             //Memory Block Pointers Initialization
+ 114   1              initOBDHParameters();   //OBDH Parameters Initialization
+ 115   1              
+ 116   1              #if (TASK_ENABLE == 1)
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 3   
+
+ 117   1              initTaskFlags();                //Task Flags' Initialization
+ 118   1              initTaskScript();               //Task Script's Initialization
+ 119   1              #endif
+ 120   1      
+ 121   1              initScheduler();                //Scheduler Initialization
+ 122   1              
+ 123   1              #if (CQUEUE_ENABLE == 1)
+                      initOBDHCQueue();                       //OBDH Command Queue Initialization
+                      #endif
+ 126   1      
+ 127   1              SFRPAGE = LEGACY_PAGE;
+ 128   1              SI = 0;                                 //Put down SMBus flag
+ 129   1              #if (STORING_ENABLE == 1)
+ 130   1              initSD();                               //SD card initialization
+ 131   1              #endif
+ 132   1      
+ 133   1      }
+ 134          
+ 135          //------------------------------------------------------------------------------------
+ 136          // Disable Watchdog Timer
+ 137          //------------------------------------------------------------------------------------
+ 138          // Function's test result: fully functional
+ 139          //------------------------------------------------------------------------------------
+ 140          void disableWdt (void)
+ 141          {
+ 142   1              char SFRPAGE_SAVE = SFRPAGE;
+ 143   1      
+ 144   1              SFRPAGE = CONFIG_PAGE;
+ 145   1              
+ 146   1              WDTCN = 0xDE;
+ 147   1              WDTCN = 0xAD;
+ 148   1      
+ 149   1              SFRPAGE = SFRPAGE_SAVE;
+ 150   1      }
+ 151          
+ 152          //------------------------------------------------------------------------------------
+ 153          // Oscillator Initialization
+ 154          //------------------------------------------------------------------------------------
+ 155          // Function's test result: fully functional
+ 156          //------------------------------------------------------------------------------------
+ 157          void initOscillator (void)
+ 158          {
+ 159   1              #if (SYSCLK_USED == LEVEL_3_SYSCLK)
+                      unsigned short l_us_counter;
+                      #elif (SYSCLK_USED == LEVEL_2_SYSCLK)
+ 162   1              unsigned short l_us_counter;
+ 163   1              #endif
+ 164   1      
+ 165   1              char SFRPAGE_SAVE = SFRPAGE;
+ 166   1      
+ 167   1              //Sit in this SFRPAGE, to get (or set) latest reset source
+ 168   1              SFRPAGE = LEGACY_PAGE;
+ 169   1      
+ 170   1              //Reset Source Register (RSTSRC)
+ 171   1              //Bit7: Reserved
+ 172   1              
+ 173   1              //Bit6: CNVRSEF: Convert Start 0 Reset Source Enable and Flag
+ 174   1              //Write
+ 175   1              //0: CNVSTR0 is not a reset source
+ 176   1              //1: CNVSTR0 is a reset source (active low)
+ 177   1              //Read
+ 178   1              //0: Source of prior reset was not CNVSTR0
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 4   
+
+ 179   1              //1: Source of prior reset was CNVSTR0
+ 180   1              
+ 181   1              //Bit5: C0RSEF: Comparator0 Reset Enable and Flag.
+ 182   1              //Write
+ 183   1              //0: Comparator0 is not a reset source
+ 184   1              //1: Comparator0 is a reset source (active low)
+ 185   1              //Read
+ 186   1              //0: Source of last reset was not Comparator0
+ 187   1              //1: Source of last reset was Comparator0.
+ 188   1              
+ 189   1              //Bit4: SWRSF: Software Reset Force and Flag
+ 190   1              //Write
+ 191   1              //0: No effect
+ 192   1              //1: Forces an internal reset. RST pin is not effected.
+ 193   1              //Read
+ 194   1              //0: Source of last reset was not a write to the SWRSF bit.
+ 195   1              //1: Source of last reset was a write to the SWRSF bit.
+ 196   1              
+ 197   1              //Bit3: WDTRSF: Watchdog Timer Reset Flag.
+ 198   1              //0: Source of last reset was not WDT timeout
+ 199   1              //1: Source of last reset was WDT timeout
+ 200   1              
+ 201   1              //Bit2: MCDRSF: Missing Clock Detector Flag
+ 202   1              //Write
+ 203   1              //0: Missing Clock Detector disabled
+ 204   1              //1: Missing Clock Detector enabled; triggers a reset if a missing clock condition is detected
+ 205   1              //Read
+ 206   1              //0: Source of last reset was not a Missing Clock Detector timeout
+ 207   1              //1: Source of last reset was a Missing Clock Detector timeout
+ 208   1              
+ 209   1              //Bit1: PORSF: Power-On Reset Flag
+ 210   1              //Write
+ 211   1              //If the VDD monitor circuitry is enabled (by tying the MONEN pin to a logic high state), this bit can be
+             - written to
+ 212   1              //select or de-select the VDD monitor as a reset source
+ 213   1              //0: De-select the VDD monitor as a reset source
+ 214   1              //1: Select the VDD monitor as a reset source
+ 215   1              //Important:
+ 216   1              //At power-on, the VDD monitor is enabled/disabled using the external VDD monitor enable pin (MONEN).
+ 217   1              //The PORSF bit does not disable or enable the VDD monitor circuit. It simply selects the VDD monitor as 
+             -a reset source
+ 218   1              //Read
+ 219   1              //This bit is set whenever a power-on reset occurs. This may be due to a true power-on reset or a VDD mon
+             -itor reset.
+ 220   1              //In either case, data memory should be considered indeterminate following the reset.
+ 221   1              //0: Source of last reset was not a power-on or VDD monitor reset
+ 222   1              //1: Source of last reset was a power-on or VDD monitor reset
+ 223   1              //Note: When this flag is read as '1', all other reset flags are indeterminate
+ 224   1              
+ 225   1              //Bit0: PINRSF: HW Pin Reset Flag
+ 226   1              //Write
+ 227   1              //0: No effect
+ 228   1              //1: Forces a Power-On Reset. RST is driven low
+ 229   1              //Read
+ 230   1              //0: Source of prior reset was not RST pin
+ 231   1              //1: Source of prior reset was RST pin
+ 232   1              //Missing Clock Detector enabled; triggers a reset if a missing clock condition is detected
+ 233   1              //Select the VDD monitor as a reset source
+ 234   1      
+ 235   1              //Set reset source to VDD monitor reset (write, bit1 = 1), not CNVSTR0 (bit6), not Comparator0 (bit5)
+ 236   1              //Triggers a reset if a missing clock condition is detected (write, bit2 = 1)
+ 237   1              RSTSRC |= 0x06;
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 5   
+
+ 238   1      
+ 239   1              //Store last reset source
+ 240   1              str_obdh_hk.uc_mcu_rstsrc = RSTSRC;
+ 241   1      
+ 242   1              #if (SYSCLK_USED == LEVEL_3_SYSCLK)
+                      //Initialize external clock first
+                      //Select the external crystal oscillator
+                      g_uc_evha_flag &= ~EVENT_FLAG_EXTOSC_FAIL;
+              
+                      //Initialize oscillator parameters as external
+                      OSC_FREQUENCY   = EXT_OSC_FREQUENCY;
+                      SYSCLK                  = EXT_SYSCLK;
+                      PLL_MUL                 = EXT_PLL_MUL;
+                      PLL_DIV                 = EXT_PLL_DIV;
+                      PLL_DIV_CLK     = EXT_PLL_DIV_CLK;
+                      PLL_OUT_CLK     = EXT_PLL_OUT_CLK;
+                      FLSCL_FLRT              = EXT_FLSCL_FLRT;
+                      PLLFLT_ICO              = EXT_PLLFLT_ICO;
+                      PLLFLT_LOOP             = EXT_PLLFLT_LOOP;
+              
+                      //Set SFRPAGE to config page
+                      SFRPAGE = CONFIG_PAGE;
+              
+                      //External Oscillator Control Register (OSCXCN)
+                      //Bit 7: XTLVLD: Crystal Oscillator Valid Flag
+                      //(Valid only when XOSCMD = 11x.)
+                      //0: Crystal Oscillator is unused or not yet stable
+                      //1: Crystal Oscillator is running and stable
+                      //Bits [6..4]: XOSCMD[2..0]: External Oscillator Mode Bits
+                      //00x: External Oscillator circuit off
+                      //010: External CMOS Clock Mode (External CMOS Clock input on XTAL1 pin)
+                      //011: External CMOS Clock Mode with divide by 2 stage (External CMOS Clock input on XTAL1 pin)
+                      //10x: RC/C Oscillator Mode with divide by 2 stage
+                      //110: Crystal Oscillator Mode
+                      //111: Crystal Oscillator Mode with divide by 2 stage
+                      //Bit3: RESERVED. Read = 0, Write = don't care
+                      //Bits [2..0]: XFCN[2..0]: External Oscillator Frequency Control Bits
+                      //000-111: see table below:
+                      //XFCN  Crystal (XOSCMD = 11x)  RC (XOSCMD = 10x)       C (XOSCMD = 10x)
+                      //000   f = 32 kHz                                      f = 25 kHz                                      K Factor = 0.87
+                      //001   32 kHz < f = 84 kHz     25 kHz < f = 50 kHz             K Factor = 2.6
+                      //010   84 kHz < f = 225 kHz    50 kHz < f = 100 kHz    K Factor = 7.7
+                      //011   225 kHz < f = 590 kHz   100 kHz < f = 200 kHz   K Factor = 22
+                      //100   590 kHz < f = 1.5 MHz   200 kHz < f = 400 kHz   K Factor = 65
+                      //101   1.5 MHz < f = 4 MHz     400 kHz < f = 800 kHz   K Factor = 180
+                      //110   4 MHz < f = 10 MHz      800 kHz < f = 1.6 MHz   K Factor = 664
+                      //111   10 MHz < f = 30 MHz 
+              
+                      OSCXCN = 0x60;
+                      OSCXCN |= XFCN;
+                      
+                      //Wait at least 1ms for initialization
+                      for (l_us_counter = 0; l_us_counter < 30000; l_us_counter++);
+              
+                      //Reset waiting counter
+                      l_us_counter = 0;
+                      
+                      //Loop until XTLVLD = 1 -> Crystal Oscillator is running and stable
+                      while (((OSCXCN & 0x80) == 0) && l_us_counter < 30000) l_us_counter++;
+                      
+                      0x80 
+              
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 6   
+
+                      //Check if the waiting time is NOT passed (external clock is working)
+                      if (l_us_counter < 30000){
+                              //System Clock Selection Register (CLKSEL)
+                              //Bits 7–6: Reserved.
+                              //Bits 5–4: CLKDIV1–0: Output SYSCLK Divide Factor.
+                              //These bits can be used to pre-divide SYSCLK before it is output to a port pin through the crossbar.
+                              //00: Output will be SYSCLK.
+                              //01: Output will be SYSCLK/2.
+                              //10: Output will be SYSCLK/4.
+                              //11: Output will be SYSCLK/8.
+                              //See Section “18. Port Input/Output” on page 235 for more details about routing this output to a port p
+             -in.
+                              //Bits 3–2: Reserved.
+                              //Bits 1–0: CLKSL1–0: System Clock Source Select Bits.
+                              //00: SYSCLK derived from the Internal Oscillator, and scaled as per the IFCN bits in OSCICN.
+                              //01: SYSCLK derived from the External Oscillator circuit.
+                              //10: SYSCLK derived from the PLL.
+                              //11: Reserved.
+                      
+                              //SYSCLK is derived from External oscillator circuit
+                              CLKSEL = 0x01;
+                      
+                              //PLL reference clock is External Oscillator
+                              PLL0CN  = 0x04;
+                      
+                              //Cache Control Register (CCH0CN)
+                      
+                              //Bit 7: CHWREN: Cache Write Enable
+                              //This bit enables the processor to write to the cache memory.
+                              //0: Cache contents are not allowed to change, except during Flash writes/erasures or cache locks.
+                              //1: Writes to cache memory are allowed.
+                              //Bit 6: CHRDEN: Cache Read Enable.
+                              //This bit enables the processor to read instructions from the cache memory.
+                              //0: All instruction data comes from Flash memory or the prefetch engine.
+                              //1: Instruction data is obtained from cache (when available).
+                              //Bit 5: CHPFEN: Cache Prefetch Enable.
+                              //This bit enables the prefetch engine.
+                              //0: Prefetch engine is disabled.
+                              //1: Prefetch engine is enabled.
+                              //Bit 4: CHFLSH: Cache Flush.
+                              //When written to a ‘1’, this bit clears the cache contents. This bit always reads ‘0’.
+                              //Bit 3: CHRETI: Cache RETI Destination Enable.
+                              //This bit enables the destination of a RETI address to be cached.
+                              //0: Destinations of RETI instructions will not be cached.
+                              //1: RETI destinations will be cached.
+                              //Bit 2: CHISR: Cache ISR Enable.
+                              //This bit allows instructions which are part of an Interrupt Service Rountine (ISR) to be cached.
+                              //0: Instructions in ISRs will not be loaded into cache memory.
+                              //1: Instructions in ISRs can be cached.
+                              //Bit 1: CHMOVC: Cache MOVC Enable.
+                              //This bit allows data requested by a MOVC instruction to be loaded into the cache memory.
+                              //0: Data requested by MOVC instructions will not be cached.
+                              //1: Data requested by MOVC instructions will be loaded into cache memory.
+                              //Bit 0: CHBLKW: Block Write Enable.
+                              //This bit allows block writes to Flash memory from software.
+                              //0: Each byte of a software Flash write is written individually.
+                              //1: Flash bytes are written in groups of four (for code space writes) or two (for scratchpad writes).
+                      
+                              CCH0CN  &= ~0x20;
+                      
+                              //Set FLASH read time according to SYSCLK
+                              SFRPAGE = LEGACY_PAGE;
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 7   
+
+                              FLSCL   = FLSCL_FLRT;
+                      
+                              SFRPAGE = CONFIG_PAGE;
+                      
+                              CCH0CN  |= 0x20;
+                      
+                              //PLL Control Register (PLL0CN)
+                              //Bits [7..5]:  UNUSED: Read = 000b; Write = don’t care.
+                              //Bit 4:        PLLCK: PLL Lock Flag.
+                              //0: PLL Frequency is not locked.
+                              //1: PLL Frequency is locked.
+                              //Bit 3: RESERVED. Must write to ‘0’.
+                              //Bit 2: PLLSRC: PLL Reference Clock Source Select Bit
+                              //0: PLL Reference Clock Source is Internal Oscillator
+                              //1: PLL Reference Clock Source is External Oscillator
+                              //Bit 1: PLLEN: PLL Enable Bit
+                              //0: PLL is held in reset
+                              //1: PLL is enabled. PLLPWR must be ‘1’
+                              //Bit 0: PLLPWR: PLL Power Enable
+                              //0: PLL bias generator is de-activated. No static power is consumed
+                              //1: PLL bias generator is active. Must be set for PLL to operate
+                      
+                              PLL0CN  |= 0x07;
+                      }
+                      //Check if the waiting time is passed (external clock is NOT working)
+                      else{
+                              //Reset external oscillator control register
+                              OSCXCN = 0x00;
+                      
+                              //Set oscillator used as internal oscillator
+                              g_uc_evha_flag |= EVENT_FLAG_EXTOSC_FAIL;
+              
+                              //Initialize oscillator parameters as internal
+                              OSC_FREQUENCY   = INT_OSC_FREQUENCY;
+                              SYSCLK                  = INT_SYSCLK;
+                              PLL_MUL                 = INT_PLL_MUL;
+                              PLL_DIV                 = INT_PLL_DIV;
+                              PLL_DIV_CLK     = INT_PLL_DIV_CLK;
+                              PLL_OUT_CLK     = INT_PLL_OUT_CLK;
+                              FLSCL_FLRT              = INT_FLSCL_FLRT;
+                              PLLFLT_ICO              = INT_PLLFLT_ICO;
+                              PLLFLT_LOOP             = INT_PLLFLT_LOOP;
+              
+                              //Set SFRPAGE to config page
+                              SFRPAGE = CONFIG_PAGE;
+              
+                              //Internal Oscillator Control Register (OSCICN)
+                              //Bit 7: IOSCEN: Internal Oscillator Enable Bit.
+                              //0: Internal Oscillator Disabled.
+                              //1: Internal Oscillator Enabled.
+                              //Bit 6: IFRDY: Internal Oscillator Frequency Ready Flag.
+                              //0: Internal Oscillator not running at programmed frequency.
+                              //1: Internal Oscillator running at programmed frequency.
+                              //Bits 5–2: Reserved.
+                              //Bits 1–0: IFCN1-0: Internal Oscillator Frequency Control Bits.
+                              //00: Internal Oscillator is divided by 8.
+                              //01: Internal Oscillator is divided by 4.
+                              //10: Internal Oscillator is divided by 2.
+                              //11: Internal Oscillator is divided by 1.
+                              OSCICN = 0x83;                                          // To divide internal oscillator by 1
+              
+                              //PLL Control Register Register (PLL0CN)
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 8   
+
+                              //Bits 7–5: UNUSED: Read = 000b; Write = don’t care.
+                              //Bit 4: PLLCK: PLL Lock Flag.
+                              //0: PLL Frequency is not locked.
+                              //1: PLL Frequency is locked.
+                              //Bit 3: RESERVED. Must write to ‘0’.
+                              //Bit 2: PLLSRC: PLL Reference Clock Source Select Bit.
+                              //0: PLL Reference Clock Source is Internal Oscillator.
+                              //1: PLL Reference Clock Source is External Oscillator.
+                              //Bit 1: PLLEN: PLL Enable Bit.
+                              //0: PLL is held in reset.
+                              //1: PLL is enabled. PLLPWR must be ‘1’.
+                              //Bit 0: PLLPWR: PLL Power Enable.
+                              //0: PLL bias generator is de-activated. No static power is consumed.
+                              //1: PLL bias generator is active. Must be set for PLL to operate.
+              
+                              //With PLL (remove this part if not using PLL)
+                              PLL0CN  = 0x00;                                         // Set internal oscillator as PLL source (bit2 = 0)
+                      
+                              SFRPAGE = LEGACY_PAGE;
+              
+                              //Set internal oscillator as PLL source
+                              FLSCL   = FLSCL_FLRT;                           // Set FLASH read time according to SYSCLK. Default 0x30 -> 00110000 flash read t
+             -ime for 75MHz <= SYSCLK <= 100MHz
+              
+                              SFRPAGE = CONFIG_PAGE;
+                      
+                              PLL0CN  |= 0x01;                                        // Enable Power to PLL. Bit0 = 1 -> PLL bias generator is active. Must be set for PL
+             -L to operate
+                      }
+                      
+                      PLL0DIV = PLL_DIV;                  // Set PLL divider value using macro (default value = 1)
+                      PLL0MUL = PLL_MUL;                  // Set PLL multiplier value using macro (default value = 4)
+                      PLL0FLT = PLLFLT_ICO|PLLFLT_LOOP;   // Set the PLL filter loop and ICO bits
+                                                                                              // Default PLLFLT_ICO = 0x00 (for 72,500,000 <= PLL_OUT_CLK (98,000,000) <= 100,000,000)
+                                                                                              // Default PLLFLT_LOOP = 0x01 (for 19,500,000 <= PLL_DIV_CLK (24,500,000) <= 30,000,000)
+                                                                                              // Default PLL0FLT = 0x01 (00 00 0001) -> Bit5-4 = 00 (PLL output clock 65-100MHz), Bit3-0 = 000
+             -1 (Divided PLL Reference Clock = 19-30MHz)
+                      for (l_us_counter = 0x04FF; l_us_counter != 0; l_us_counter--);                 // Wait at least 5us
+                      PLL0CN  |= 0x02;                    // Enable the PLL -> bit1 = 1 (PLL is enabled)
+                      while(!(PLL0CN & 0x10));            // Wait until PLL frequency is locked (Bit4 = 0, PLL frequency is not
+             - locked, only if Bit4 = 1 -> PLL0CN & 0x10 = true, while() = false)
+                      CLKSEL  = 0x02;                     // Select PLL as SYSCLK source -> bit1-0 = 10, SYSCLK derived from PL
+             -L, normally 00, SYSCLK is derived from internal oscillator)
+                      //With PLL part ends
+                      
+                      #elif (SYSCLK_USED == LEVEL_2_SYSCLK)
+ 464   1              //Initialize external clock first
+ 465   1              //Select the external crystal oscillator
+ 466   1              g_uc_evha_flag &= ~EVENT_FLAG_EXTOSC_FAIL;
+ 467   1      
+ 468   1              //Initialize oscillator parameters as external
+ 469   1              OSC_FREQUENCY   = EXT_OSC_FREQUENCY;
+ 470   1              SYSCLK                  = EXT_SYSCLK;
+ 471   1      
+ 472   1              //Set SFRPAGE to config page
+ 473   1              SFRPAGE = CONFIG_PAGE;
+ 474   1      
+ 475   1              //External Oscillator Control Register (OSCXCN)
+ 476   1              //Bit 7: XTLVLD: Crystal Oscillator Valid Flag
+ 477   1              //(Valid only when XOSCMD = 11x.)
+ 478   1              //0: Crystal Oscillator is unused or not yet stable
+ 479   1              //1: Crystal Oscillator is running and stable
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 9   
+
+ 480   1              //Bits [6..4]: XOSCMD[2..0]: External Oscillator Mode Bits
+ 481   1              //00x: External Oscillator circuit off
+ 482   1              //010: External CMOS Clock Mode (External CMOS Clock input on XTAL1 pin)
+ 483   1              //011: External CMOS Clock Mode with divide by 2 stage (External CMOS Clock input on XTAL1 pin)
+ 484   1              //10x: RC/C Oscillator Mode with divide by 2 stage
+ 485   1              //110: Crystal Oscillator Mode
+ 486   1              //111: Crystal Oscillator Mode with divide by 2 stage
+ 487   1              //Bit3: RESERVED. Read = 0, Write = don't care
+ 488   1              //Bits [2..0]: XFCN[2..0]: External Oscillator Frequency Control Bits
+ 489   1              //000-111: see table below:
+ 490   1              //XFCN  Crystal (XOSCMD = 11x)  RC (XOSCMD = 10x)       C (XOSCMD = 10x)
+ 491   1              //000   f = 32 kHz                                      f = 25 kHz                                      K Factor = 0.87
+ 492   1              //001   32 kHz < f = 84 kHz     25 kHz < f = 50 kHz             K Factor = 2.6
+ 493   1              //010   84 kHz < f = 225 kHz    50 kHz < f = 100 kHz    K Factor = 7.7
+ 494   1              //011   225 kHz < f = 590 kHz   100 kHz < f = 200 kHz   K Factor = 22
+ 495   1              //100   590 kHz < f = 1.5 MHz   200 kHz < f = 400 kHz   K Factor = 65
+ 496   1              //101   1.5 MHz < f = 4 MHz     400 kHz < f = 800 kHz   K Factor = 180
+ 497   1              //110   4 MHz < f = 10 MHz      800 kHz < f = 1.6 MHz   K Factor = 664
+ 498   1              //111   10 MHz < f = 30 MHz 
+ 499   1      
+ 500   1              OSCXCN = 0x60;
+ 501   1              OSCXCN |= XFCN;
+ 502   1              
+ 503   1              //Wait at least 1ms for initialization
+ 504   1              for (l_us_counter = 0; l_us_counter < 30000; l_us_counter++);
+ 505   1      
+ 506   1              //Reset waiting counter
+ 507   1              l_us_counter = 0;
+ 508   1              
+ 509   1              //Loop until XTLVLD = 1 -> Crystal Oscillator is running and stable
+ 510   1              while (((OSCXCN & 0x80) == 0) && l_us_counter < 30000) l_us_counter++;
+ 511   1      
+ 512   1              //Check if the waiting time is NOT passed (external clock is working)
+ 513   1              if (l_us_counter < 30000){
+ 514   2                      //System Clock Selection Register (CLKSEL)
+ 515   2                      //Bits 7–6: Reserved.
+ 516   2                      //Bits 5–4: CLKDIV1–0: Output SYSCLK Divide Factor.
+ 517   2                      //These bits can be used to pre-divide SYSCLK before it is output to a port pin through the crossbar.
+ 518   2                      //00: Output will be SYSCLK.
+ 519   2                      //01: Output will be SYSCLK/2.
+ 520   2                      //10: Output will be SYSCLK/4.
+ 521   2                      //11: Output will be SYSCLK/8.
+ 522   2                      //See Section “18. Port Input/Output” on page 235 for more details about routing this output to a port p
+             -in.
+ 523   2                      //Bits 3–2: Reserved.
+ 524   2                      //Bits 1–0: CLKSL1–0: System Clock Source Select Bits.
+ 525   2                      //00: SYSCLK derived from the Internal Oscillator, and scaled as per the IFCN bits in OSCICN.
+ 526   2                      //01: SYSCLK derived from the External Oscillator circuit.
+ 527   2                      //10: SYSCLK derived from the PLL.
+ 528   2                      //11: Reserved.
+ 529   2              
+ 530   2                      //SYSCLK is derived from External oscillator circuit
+ 531   2                      CLKSEL = 0x01;
+ 532   2              }
+ 533   1              //Check if the waiting time is passed (external clock is NOT working)
+ 534   1              else{
+ 535   2                      //Reset external oscillator control register
+ 536   2                      OSCXCN = 0x00;
+ 537   2              
+ 538   2                      //Set oscillator used as internal oscillator
+ 539   2                      g_uc_evha_flag |= EVENT_FLAG_EXTOSC_FAIL;
+ 540   2      
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 10  
+
+ 541   2                      //Initialize oscillator parameters as internal
+ 542   2                      OSC_FREQUENCY   = INT_OSC_FREQUENCY;
+ 543   2                      SYSCLK                  = INT_SYSCLK;
+ 544   2      
+ 545   2                      //Internal Oscillator Control Register (OSCICN)
+ 546   2                      //Bit 7: IOSCEN: Internal Oscillator Enable Bit.
+ 547   2                      //0: Internal Oscillator Disabled.
+ 548   2                      //1: Internal Oscillator Enabled.
+ 549   2                      //Bit 6: IFRDY: Internal Oscillator Frequency Ready Flag.
+ 550   2                      //0: Internal Oscillator not running at programmed frequency.
+ 551   2                      //1: Internal Oscillator running at programmed frequency.
+ 552   2                      //Bits 5–2: Reserved.
+ 553   2                      //Bits 1–0: IFCN1-0: Internal Oscillator Frequency Control Bits.
+ 554   2                      //00: Internal Oscillator is divided by 8.
+ 555   2                      //01: Internal Oscillator is divided by 4.
+ 556   2                      //10: Internal Oscillator is divided by 2.
+ 557   2                      //11: Internal Oscillator is divided by 1.
+ 558   2                      OSCICN = 0x83;                                          // To divide internal oscillator by 1
+ 559   2                      CLKSEL = 0x00;          //To use internal oscillator as reference for system clock      
+ 560   2              }
+ 561   1                      
+ 562   1              #elif (SYSCLK_USED == LEVEL_1_SYSCLK)
+                      //Set oscillator used as internal oscillator
+                      g_uc_evha_flag |= EVENT_FLAG_EXTOSC_FAIL;
+              
+                      //Initialize oscillator parameters as internal
+                      OSC_FREQUENCY   = INT_OSC_FREQUENCY;
+                      SYSCLK                  = INT_SYSCLK;
+              
+                      //Internal Oscillator Control Register (OSCICN)
+                      //Bit 7: IOSCEN: Internal Oscillator Enable Bit.
+                      //0: Internal Oscillator Disabled.
+                      //1: Internal Oscillator Enabled.
+                      //Bit 6: IFRDY: Internal Oscillator Frequency Ready Flag.
+                      //0: Internal Oscillator not running at programmed frequency.
+                      //1: Internal Oscillator running at programmed frequency.
+                      //Bits 5–2: Reserved.
+                      //Bits 1–0: IFCN1-0: Internal Oscillator Frequency Control Bits.
+                      //00: Internal Oscillator is divided by 8.
+                      //01: Internal Oscillator is divided by 4.
+                      //10: Internal Oscillator is divided by 2.
+                      //11: Internal Oscillator is divided by 1.
+                      OSCICN = 0x80;          //To divide internal oscillator by 8
+                      CLKSEL = 0x00;          //To use internal oscillator as reference for system clock      
+                      #endif
+ 586   1      
+ 587   1              SFRPAGE = SFRPAGE_SAVE;
+ 588   1      }
+ 589          
+ 590          //------------------------------------------------------------------------------------
+ 591          // Port Initialization
+ 592          //------------------------------------------------------------------------------------
+ 593          // Function's test result: fully functional
+ 594          //------------------------------------------------------------------------------------
+ 595          //Ian (2012-05-15): the ports which are not initialized here are "input" ports by default
+ 596          void initPort (void)
+ 597          {
+ 598   1              char SFRPAGE_SAVE = SFRPAGE;
+ 599   1      
+ 600   1              SFRPAGE = CONFIG_PAGE;
+ 601   1      
+ 602   1              XBR0 |= 0x07;           //To enable UART0 (XBR0^2), SPI (XBR0^1), and SM Bus (XBR0^0)
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 11  
+
+ 603   1              XBR2 |= 0x44;           //To enable crossbar and weak pull-ups
+ 604   1      
+ 605   1              P0MDOUT &= ~0xC0;       //P0^6-7 pins open-drain output (that SDA and SCL lines 
+ 606   1                                                      //may draw current from outsource power supply)
+ 607   1                                              
+ 608   1                                                      //To make P0^2 to P0^5 (SPI pins) push-pull pins too
+ 609   1              P0MDOUT |= 0x3D;        //Make UART0 TX(P0.0 push-pull) (that it may send data
+ 610   1                                                      //through UART cable by its own power supply)
+ 611   1              P0 = 0xFF;                      //By default, all pins will be 'high'
+ 612   1      
+ 613   1              P1MDOUT = 0x00;         //All P1 pins open-drain output (that UART1 
+ 614   1                                                      //may draw current from outsource power supply)
+ 615   1              P1MDOUT |= 0x01;        //Make UART1 TX(P1.0 push-pull) (that it may send data
+ 616   1                                                      //through UART cable by its own power supply)
+ 617   1              P1 = 0xFF;                      //By default, all pins will be 'high'
+ 618   1      
+ 619   1              P4MDOUT |= 0x12;  //To make P4^1 & P4^4 pins (-ON_SD pin & -OE_USB) as push-pull
+ 620   1      
+ 621   1              P4 = 0xFF; //make sure that all pins in port 4 are enabled as high first.
+ 622   1      
+ 623   1              OE_USB  = ON_USB;               //Enable USB port
+ 624   1              ON_SD   = SD_ASSERT;    //Turn on SD Card
+ 625   1              NSSMD0  = SD_DEASSERT;  //Disable chip select for now
+ 626   1      
+ 627   1              SFRPAGE = SFRPAGE_SAVE; 
+ 628   1      }
+ 629          
+ 630          //------------------------------------------------------------------------------------
+ 631          // initEMIF()
+ 632          //------------------------------------------------------------------------------------
+ 633          void initEMIF (void)
+ 634          {
+ 635   1              char SFRPAGE_SAVE = SFRPAGE;
+ 636   1      
+ 637   1              SFRPAGE = EMI0_PAGE;
+ 638   1      
+ 639   1      
+ 640   1              SFRPAGE = SFRPAGE_SAVE; 
+ 641   1      }
+ 642          
+ 643          //------------------------------------------------------------------------------------
+ 644          // initSPI()
+ 645          //------------------------------------------------------------------------------------
+ 646          void initSPI (void)
+ 647          {
+ 648   1              char SFRPAGE_SAVE = SFRPAGE;
+ 649   1      
+ 650   1              SFRPAGE = SPI0_PAGE;
+ 651   1      
+ 652   1              //With PLL
+ 653   1              SPI0CKR = (SYSCLK /(SPICLK*2)) - 1;
+ 654   1      
+ 655   1              SPI0CFG |= 0x40;
+ 656   1              NSSMD0  = 1;
+ 657   1              NSSMD1  = 1;
+ 658   1              SPIEN   = 1;
+ 659   1              //EIE1  = 0x01;                 //Enable SPI0 Interrupt
+ 660   1      
+ 661   1              SFRPAGE = SFRPAGE_SAVE; 
+ 662   1      }
+ 663          
+ 664          //------------------------------------------------------------------------------------
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 12  
+
+ 665          // UART0 Initialization
+ 666          //------------------------------------------------------------------------------------
+ 667          // Function's test result: fully functional
+ 668          //------------------------------------------------------------------------------------
+ 669          void initUart0 (void)
+ 670          {
+ 671   1              char SFRPAGE_SAVE = SFRPAGE;
+ 672   1      
+ 673   1              SFRPAGE = UART0_PAGE;
+ 674   1      
+ 675   1              SCON0 = 0x50;           //SCON: mode 1, 8-bit UART, enable RX and TX
+ 676   1              SSTA0 = 0x05;           //Following Timer2 for UART Baud Rate source for
+ 677   1                                                      //Transfer and Receive, Timer2 overflows generating
+ 678   1                                                      //TX and RX Baud Rate
+ 679   1              ES0 = 1;                        //Enable UART0 interrupt
+ 680   1              IP |= 0x10;                     //UART0 interrupt is set to high priority
+ 681   1      
+ 682   1              SFRPAGE = SFRPAGE_SAVE;
+ 683   1      }
+ 684          
+ 685          //------------------------------------------------------------------------------------
+ 686          // UART1 Initialization
+ 687          //------------------------------------------------------------------------------------
+ 688          // Function's test result: fully functional
+ 689          //------------------------------------------------------------------------------------
+ 690          void initUart1 (void)
+ 691          {
+ 692   1              char SFRPAGE_SAVE = SFRPAGE;
+ 693   1      
+ 694   1              SFRPAGE = UART1_PAGE;
+ 695   1      
+ 696   1              SCON1 = 0x50;           //SCON: mode 1, 8-bit UART, enable RX and TX
+ 697   1              EIE2 |= 0x40;           //Enable UART1 interrupt, TI1 is set to '1' when transmitting
+ 698   1                                                      //RI1 is set to '1' when receiving
+ 699   1              EIP2 |= 0x40;           //UART1 interrupt is set to high priority
+ 700   1              
+ 701   1              SFRPAGE = SFRPAGE_SAVE;
+ 702   1      }
+ 703          
+ 704          //------------------------------------------------------------------------------------
+ 705          // SMBus Initialization
+ 706          //------------------------------------------------------------------------------------
+ 707          // Function's test result: fully functional
+ 708          //------------------------------------------------------------------------------------
+ 709          void initSMBus (void)
+ 710          {
+ 711   1              char SFRPAGE_SAVE = SFRPAGE;            
+ 712   1              
+ 713   1              SFRPAGE = SMB0_PAGE;
+ 714   1              
+ 715   1              SMB0CN = 0x07;  //bit2 = 1, Assert Acknowledge low (AA bit = 1b) during ACK cycle (not NACK during ACK cyc
+             -le)
+ 716   1                                              //bit1 = 1, enable SMBus free timeout detect (as specified by SMB0CR value)
+ 717   1                                              //bit0 = 1, enable SCL low timeout detect (as specified by timer3 overflow)
+ 718   1      
+ 719   1              //With PLL      
+ 720   1              SMB0CR = 257 - (SYSCLK / (8 * SMB_FREQUENCY));  //using SYSCLK 98MHz and SMB freq 400KHz, it is about 226
+ 721   1                                                                                                              //Thus, SMBus free timeout period is about 12.35 us
+ 722   1                                                                                                              //TLow = 1.22 us, THigh = 1.93 us
+ 723   1              
+ 724   1              SMB0ADR = OBDH_ADDR;    //set own address.
+ 725   1              SMB0CN |= 0x40;                 //bit6 = 1, enable SMBus;
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 13  
+
+ 726   1              EIE1 |= 0x02;                   //enable the SMBus interrupt 
+ 727   1              
+ 728   1              SFRPAGE = SFRPAGE_SAVE;             
+ 729   1      }
+ 730          
+ 731          #if (DEBUGGING_FEATURE == 1)
+ 732          //------------------------------------------------------------------------------------
+ 733          // Timer1 Initialization, used for UART1
+ 734          // The ISR software for this timer is not used, nevertheless this timer needs
+ 735          // to be set to control UART speed, less the uC cannot communicate with PC.
+ 736          // If debugging feature is disabled, however, this function will be removed
+ 737          //------------------------------------------------------------------------------------
+ 738          // Function's test result: fully functional
+ 739          //------------------------------------------------------------------------------------
+ 740          void initTimer1 (void)
+ 741          {
+ 742   1              char SFRPAGE_SAVE = SFRPAGE;
+ 743   1      
+ 744   1              SFRPAGE = TIMER01_PAGE;
+ 745   1      
+ 746   1              TMOD &= ~0x30;  //Clear bit5-4
+ 747   1              TMOD |= 0x20;   //Timer1 mode is mode 2: 8-bit auto reload
+ 748   1              CKCON &= ~0x13; //Clear bit4 and bit1-0
+ 749   1      
+ 750   1              //With PLL
+ 751   1              CKCON |= 0x01;  //bit4 = 0 -> timer1 is using pre clock defined by prescale bits (bit1-0)
+ 752   1                                              //bit1-0 = 01 -> Clock source is pre-scaled (SYSCLK/4 = 24.5MHz (internal)/24.8832Mhz (external)) clo
+             -ck input        
+ 753   1              TH1     = 256-(SYSCLK/4/2/BAUDRATE);    //Reload value = 0x96 (150), no of count ups = 256-150 = 106 - internal 
+             -oscillator
+ 754   1                                                                                      //Reload value = 0x94 (148), no of count ups = 256-148 = 108 - external oscillator
+ 755   1                                                                                      //UART1 baudrate = 98,000,000/4/106/2 = 115566bps (115200) - internal oscillator
+ 756   1                                                                                      //UART1 baudrate = 99,532,800/4/108/2 = 115200bps - external oscillator
+ 757   1      
+ 758   1              TL1 = TH1;              //Initialize TL1 value as TH1
+ 759   1              
+ 760   1              TR1 = 1;                //Start timer1
+ 761   1      
+ 762   1              SFRPAGE = SFRPAGE_SAVE;         
+ 763   1      }
+ 764          
+ 765          //------------------------------------------------------------------------------------
+ 766          // Timer2 Initialization, used for UART0
+ 767          // The ISR software for this timer is not used, nevertheless this timer needs
+ 768          // to be set to control UART speed, less the uC cannot communicate with PC.
+ 769          // If debugging feature is disabled, however, this function will be removed
+ 770          //------------------------------------------------------------------------------------
+ 771          // Function's test result: fully functional
+ 772          //------------------------------------------------------------------------------------
+ 773          void initTimer2 (void)
+ 774          {
+ 775   1              char SFRPAGE_SAVE = SFRPAGE;
+ 776   1      
+ 777   1              SFRPAGE = TMR2_PAGE;
+ 778   1      
+ 779   1              TMR2CN = 0x00;  //Timer in 16-bit auto-reload up timer mode
+ 780   1              TMR2CF = 0x08;  //SYSCLK is time base; no output; up count only
+ 781   1      
+ 782   1              //With PLL
+ 783   1              RCAP2 = 0xFFFF-(SYSCLK/BAUDRATE/16)+1;  //The value is set up for UART0 
+ 784   1                                                                                              //SYSCLK = 98MHz, BAUDRATE = 115200 (113425)
+ 785   1                                                                                              //SYSCLK = 99.5328MHz, BAUDRATE = 115200
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 14  
+
+ 786   1      
+ 787   1              TMR2 = RCAP2;
+ 788   1              
+ 789   1              TR2 = 1;                //Start timer2
+ 790   1      
+ 791   1              SFRPAGE = SFRPAGE_SAVE;         
+ 792   1      }
+ 793          #endif
+ 794          
+ 795          //------------------------------------------------------------------------------------
+ 796          // Timer3 Initialization, used for SMBus line (SCL low) timeout
+ 797          //------------------------------------------------------------------------------------
+ 798          // Function's test result: fully functional
+ 799          //------------------------------------------------------------------------------------
+ 800          void initTimer3 (void)
+ 801          {
+ 802   1              char SFRPAGE_SAVE = SFRPAGE;
+ 803   1      
+ 804   1              SFRPAGE = TMR3_PAGE;
+ 805   1      
+ 806   1              TMR3CN = 0x00;  //bit3 = 0, timer3 external enable off (ignore external disturbance)
+ 807   1                                              //bit2 (TR3) = 0, timer3 is disabled (later needs to be enabled)
+ 808   1                                              //bit1 = 0, timer3 is in timer mode - not counter mode 
+ 809   1                                              //bit0 = 0, timer3 in auto-reload mode
+ 810   1      
+ 811   1              TMR3CF = 0x00;  //bit4-3 = 00, timer3 uses SYSCLK/12
+ 812   1                                              //bit1 = 0, timer3 output not available
+ 813   1                                              //bit0 = 0, timer3 counts up
+ 814   1              
+ 815   1              #if (SYSCLK_USED == LEVEL_3_SYSCLK)
+                      //With PLL
+                      RCAP3 = -(SYSCLK/12000*7);      //to configure overflow after 7ms
+                                                                              //this is used to set SCL low timeout period
+                      #elif (SYSCLK_USED == LEVEL_2_SYSCLK)
+ 820   1              //Without PLL
+ 821   1              RCAP3 = -(SYSCLK/12000*25);     //to configure overflow after 25ms
+ 822   1                                                                      //this is used to set SCL low timeout period
+ 823   1              #elif (SYSCLK_USED == LEVEL_1_SYSCLK)
+                      //Without PLL
+                      RCAP3 = -(SYSCLK/12000*25);     //to configure overflow after 25ms
+                                                                              //this is used to set SCL low timeout period
+                      #endif
+ 828   1      
+ 829   1              TMR3 = RCAP3;                           //timer3 initial value (-51041)
+ 830   1      
+ 831   1              EIE2 |= 0x01;   //Enable timer3 interrupt
+ 832   1              TR3 = 1;                //Start timer3
+ 833   1      
+ 834   1              SFRPAGE = SFRPAGE_SAVE;         
+ 835   1      }
+ 836          
+ 837          //------------------------------------------------------------------------------------
+ 838          // Timer4 Initialization, acts as the primary timer for the system
+ 839          //------------------------------------------------------------------------------------
+ 840          // Function's test result: fully functional
+ 841          //------------------------------------------------------------------------------------
+ 842          void initTimer4 (void)
+ 843          {
+ 844   1              char SFRPAGE_SAVE = SFRPAGE;
+ 845   1      
+ 846   1              SFRPAGE = TMR4_PAGE;
+ 847   1      
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 15  
+
+ 848   1              TMR4CN = 0x00;  //bit3 = 0, timer4 external enable off (ignore external disturbance)
+ 849   1                                              //bit2 (TR4) = 0, timer4 is disabled (later needs to be enabled)
+ 850   1                                              //bit1 = 0, timer4 is in timer mode - not counter mode 
+ 851   1                                              //bit0 = 0, timer4 in auto-reload mode
+ 852   1      
+ 853   1              TMR4CF = 0x00;  //bit4-3 = 00, timer4 uses SYSCLK/12
+ 854   1                                              //bit1 = 0, timer4 output not available
+ 855   1                                              //bit0 = 0, timer4 counts up
+ 856   1              
+ 857   1              //With PLL
+ 858   1              RCAP4 = -(SYSCLK/12000*5);      //to configure overflow every 5ms
+ 859   1                                                                      //this is used for global software timer
+ 860   1      
+ 861   1              TMR4 = RCAP4;           //timer4 initial value
+ 862   1      
+ 863   1              EIE2 |= 0x04;           //Enable timer4 interrupt
+ 864   1              EIP2 |= 0x04;           //Set timer4 interrupt to high priority
+ 865   1              TR4 = 1;                        //Start timer4
+ 866   1      
+ 867   1              SFRPAGE = SFRPAGE_SAVE;         
+ 868   1      }
+ 869          
+ 870          //-----------------------------------------------------------------------------
+ 871          // initA2DConverter
+ 872          //-----------------------------------------------------------------------------
+ 873          //
+ 874          // Return Value : None
+ 875          // Parameters   : None
+ 876          //
+ 877          // Configure ADC0 to use Timer3 overflows as conversion source, to
+ 878          // generate an interrupt on conversion complete, and to use right-justified
+ 879          // output mode. Enables ADC end of conversion interrupt. Leaves ADC disabled.
+ 880          //
+ 881          //-----------------------------------------------------------------------------
+ 882          void initA2DConverter (void)
+ 883          {
+ 884   1              //Save Current SFR page
+ 885   1              char SFRPAGE_SAVE = SFRPAGE;
+ 886   1      
+ 887   1              SFRPAGE = ADC0_PAGE;
+ 888   1      
+ 889   1              //ADC0 disabled; normal tracking mode; ADC0 conversions are initiated every write of '1' to AD0BUSY; ADC0
+             - data is right-justified
+ 890   1              ADC0CN = 0x40;
+ 891   1      
+ 892   1              //Enable temp sensor, on-chip VREF, and VREF output buffer
+ 893   1              REF0CN = 0x07;
+ 894   1      
+ 895   1              //AIN inputs are single-ended (default)
+ 896   1              AMX0CF = 0x00;
+ 897   1      
+ 898   1              //Select internal temperature sensor as the ADC mux input
+ 899   1              AMX0SL = 0x0F;
+ 900   1      
+ 901   1              //ADC conversion clock = 2.5MHz
+ 902   1              ADC0CF = (unsigned char)(((SYSCLK / SAR_CLK / 2) - 1) << 3);
+ 903   1      
+ 904   1              //PGA gain = 0.5 (default = 1, ADC0CF = 0x00)
+ 905   1              ADC0CF |= 0x07;
+ 906   1      
+ 907   1              //Enable ADC
+ 908   1              AD0EN = 1;
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 16  
+
+ 909   1      
+ 910   1              //Restore SFR page
+ 911   1              SFRPAGE = SFRPAGE_SAVE;
+ 912   1      }
+ 913          
+ 914          #if (TIME_ENABLE == 1)
+ 915          //------------------------------------------------------------------------------------
+ 916          // Satellite Date Initialization
+ 917          //------------------------------------------------------------------------------------
+ 918          // Function's test result: fully functional
+ 919          //------------------------------------------------------------------------------------
+ 920          //Ian (2012-05-15): the launch date is unknown until today.
+ 921          //Ian (2013-08-13): the launch date & time is expected to be on 2013-10-14 07:25:48
+ 922          void initSatelliteDate (void)
+ 923          {
+ 924   1              str_sat_date.us_init_ms                                 = twoDec2oneHex(SATELLITE_INIT_MS) * 10;
+ 925   1              str_sat_date.uc_init_s                                  = twoDec2oneHex(SATELLITE_INIT_S);
+ 926   1              str_sat_date.uc_init_min                                = twoDec2oneHex(SATELLITE_INIT_MIN);
+ 927   1              str_sat_date.uc_init_hour                               = twoDec2oneHex(SATELLITE_INIT_HOUR);
+ 928   1              str_sat_date.uc_init_day_of_week                = twoDec2oneHex(SATELLITE_INIT_DAY_OF_WEEK);
+ 929   1              str_sat_date.uc_init_day_of_month               = twoDec2oneHex(SATELLITE_INIT_DAY_OF_MONTH);
+ 930   1              str_sat_date.uc_init_month                              = twoDec2oneHex(SATELLITE_INIT_MONTH);
+ 931   1              str_sat_date.uc_init_year                               = twoDec2oneHex(SATELLITE_INIT_YEAR);
+ 932   1              str_sat_date.us_current_ms                              = str_sat_date.us_init_ms;
+ 933   1              str_sat_date.uc_current_s                               = str_sat_date.uc_init_s;
+ 934   1              str_sat_date.uc_current_min                     = str_sat_date.uc_init_min;
+ 935   1              str_sat_date.uc_current_hour                    = str_sat_date.uc_init_hour;
+ 936   1              str_sat_date.uc_current_day_of_week     = str_sat_date.uc_init_day_of_week;
+ 937   1              str_sat_date.uc_current_day_of_month    = str_sat_date.uc_init_day_of_month;
+ 938   1              str_sat_date.uc_current_month                   = str_sat_date.uc_init_month;
+ 939   1              str_sat_date.uc_current_year                    = str_sat_date.uc_init_year;
+ 940   1      }
+ 941          
+ 942          //------------------------------------------------------------------------------------
+ 943          // Satellite Time Initialization
+ 944          //------------------------------------------------------------------------------------
+ 945          // Function's test result: fully functional
+ 946          //------------------------------------------------------------------------------------
+ 947          void initSatelliteTime (void)
+ 948          {
+ 949   1              str_sat_time.us_ms                      = 0;
+ 950   1              str_sat_time.uc_s                       = 0;
+ 951   1              str_sat_time.uc_min                     = 0;
+ 952   1              str_sat_time.uc_hour            = 0;
+ 953   1              str_sat_time.us_day                     = 0;    
+ 954   1      
+ 955   1              #if (RTC_CMD_ENABLE == 1)
+ 956   1              #if (DEBUGGING_FEATURE == 1)
+ 957   1              rtcDateInit(0);
+ 958   1              #else
+                      rtcDateInit();
+                      #endif
+ 961   1              #endif
+ 962   1      }
+ 963          #endif
+ 964          
+ 965          //------------------------------------------------------------------------------------
+ 966          // Satellite State Initialization
+ 967          //------------------------------------------------------------------------------------
+ 968          // Function's test result: fully functional
+ 969          //------------------------------------------------------------------------------------
+ 970          void initSatelliteState (void)
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 17  
+
+ 971          {
+ 972   1              unsigned char l_uc_i = 0;
+ 973   1      
+ 974   1              //Initialize OBDH housekeeping's initial value
+ 975   1              str_obdh_hk.uc_sat_mode                                                 = SATELLITE_MODE_M2;
+ 976   1              str_obdh_hk.uc_gsch_state                                               = GSCH_STATE_IDLE; //First, initialize this to be in the early mode
+ 977   1              str_obdh_hk.ul_wod_sample_count                                 = 0; //No hk sets stored at first
+ 978   1              str_obdh_hk.uc_scheduler_block_size                     = 0; //At first, nothing is in the scheduler
+ 979   1              str_obdh_hk.us_beacon_flag                                              = 0x0000; //Uninitialized beacon flag
+ 980   1              str_obdh_hk.us_brh_flag                                                 = 0x0000; //Uninitialized BRH flag
+ 981   1              str_obdh_hk.us_imh_flag                                                 = 0x0000; //Uninitialized IMH flag
+ 982   1              str_obdh_hk.uc_smh_flag                                                 = 0x00; //Uninitialized SMH flag
+ 983   1              str_obdh_hk.us_cw_char_rate_par                                 = CW_BEACON_RATE_DEFAULT; //Original = 6 dots/second
+ 984   1              str_obdh_hk.uc_ax25_bit_rate_par                                = BITRATE_1200; //1200 bits/second      
+ 985   1              str_obdh_hk.uc_mcu_rst_count                                    = 0; //Initialize reset count as 0
+ 986   1              str_obdh_hk.ul_data_byte_sent                                   = 0; //At first, zero byte has been sent by the satellite
+ 987   1              str_obdh_hk.uc_sat_rstsrc                                               = RESET_SOURCE_UNKNOWN; //Initialized as unknown unless proven otherwise l
+             -ater
+ 988   1      
+ 989   1              //Initialize OBDH other data's initial value
+ 990   1              str_obdh_data.uc_sat_rstsrc                                             = RESET_SOURCE_UNKNOWN; //Initialized as unknown unless proven otherwise
+             - later
+ 991   1              str_obdh_data.ul_obc_time_s                                             = 0; //Initialize OBC time as zero
+ 992   1              str_obdh_data.us_current_rev_no                                 = 0; //First, declare this as zero
+ 993   1              str_obdh_data.us_rev_offset_time                                = 0; //Initialize this as zero
+ 994   1              str_obdh_data.ul_latest_hk_sampling_time_s              = 0; //Initialize this as zero, this is for housekeeping dat
+             -a
+ 995   1              str_obdh_data.us_latest_hk_sampling_orbit               = 0; //Initialize this as zero, this is for housekeeping data
+ 996   1              str_obdh_data.uc_software_mode                                  = SOFTWARE_REAL_MODE; //Starts the software in REAL mode, not LOOPHOL
+             -D
+ 997   1              str_obdh_data.uc_no_of_data_cat_sent                    = 1;
+ 998   1              str_obdh_data.ul_log_data_start_time                    = 0x00000000;
+ 999   1              str_obdh_data.us_log_data_duration_s                    = 0x0000;
+1000   1              str_obdh_data.us_crc16_poly                                             = 0x8005;
+1001   1              str_obdh_data.us_auto_reference_rev_no                  = 1;    //First, declare this as one
+1002   1              str_obdh_data.uc_timer4_interrupt_counter               = 0;
+1003   1              str_obdh_data.uc_orbit_no_changed_counter               = 0;
+1004   1      
+1005   1              for (l_uc_i = 0; l_uc_i < OBDH_DATA_INTERVAL_PERIOD_SIZE; l_uc_i++)
+1006   1                      str_obdh_data.us_interval_period[l_uc_i]        = 0;
+1007   1      
+1008   1              //Initialize other data
+1009   1              str_pwrs_hk.uc_batt_soc                                                 = 100;          //Initialize POWER as maximum
+1010   1              str_obdh_data.uc_batt_soc                                               = 100;          //Initialize POWER as maximum
+1011   1              str_pwrs_data.uc_channel_status                                 = 0x12;         //Channel status is assumed to be 0x12 until proven otherwis
+             -e
+1012   1              str_antenna_hk.us_deployment_status                             = INITIAL_ANTENNA_STATUS;       //Initialize antenna as not deployed.
+1013   1              //Ian (2012-05-15): comment on luxp_extra.c
+1014   1              for (l_uc_i = 0; l_uc_i < BR_ECI_SAMPLE_NO; l_uc_i++){
+1015   2                      g_s_br_eci[0][l_uc_i] = 1000;   //Initialize body rate X sample data points as 1000/20 = 50 deg/s
+1016   2                      g_s_br_eci[1][l_uc_i] = 1000;   //Initialize body rate Y sample data points as 1000/20 = 50 deg/s
+1017   2                      g_s_br_eci[2][l_uc_i] = 1000;   //Initialize body rate Z sample data points as 1000/20 = 50 deg/s
+1018   2              }
+1019   1              str_obdh_data.us_br_eci_avg[0] = 1000; //Initialize body rate X average as 1000/20 = 50 deg/s
+1020   1              str_obdh_data.us_br_eci_avg[1] = 1000; //Initialize body rate Y average as 1000/20 = 50 deg/s
+1021   1              str_obdh_data.us_br_eci_avg[2] = 1000; //Initialize body rate Z average as 1000/20 = 50 deg/s
+1022   1      
+1023   1              //Initialize body rate as high unless proven otherwise
+1024   1              str_obdh_hk.us_brh_flag |= BRH_FLAG_BR_HI;
+1025   1      }
+1026          
+1027          #if (CRC_ENABLE == 1)
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 18  
+
+1028          //------------------------------------------------------------------------------------
+1029          // CRC Initialization
+1030          //------------------------------------------------------------------------------------
+1031          // Function's test result: fully functional     (tested in Dev C++)
+1032          //------------------------------------------------------------------------------------
+1033          void initCRC (void)
+1034          {
+1035   1              unsigned char   l_uc_counter;
+1036   1              unsigned char   l_uc_crc16_top_byte_register;
+1037   1              unsigned char   l_uc_crc16_control_bit[8] = 0;
+1038   1              unsigned char   l_uc_crc16_poly_top_byte = 0x80;
+1039   1              unsigned short  l_us_temp_crc16_poly = 0x0000;
+1040   1              unsigned short  l_us_top_byte;
+1041   1      
+1042   1              //To produce control bytes from every possible top byte 
+1043   1              //Ian (2012-05-15): the limit is changed to CRC_TABLE_SIZE
+1044   1              for (l_us_top_byte = 0x00; l_us_top_byte < CRC_TABLE_SIZE; l_us_top_byte++)     
+1045   1              {
+1046   2                      l_uc_counter                                    = 0x08;
+1047   2                      l_uc_crc16_top_byte_register    = l_us_top_byte;
+1048   2      
+1049   2                      while (l_uc_counter){
+1050   3                              //Check top bit of the register
+1051   3                              if((l_uc_crc16_top_byte_register >> 7) & 0x01){
+1052   4                                      l_uc_crc16_top_byte_register = ((l_uc_crc16_top_byte_register << 1) & 0xFE) ^ l_uc_crc16_poly_top_byte
+             -;
+1053   4                                      l_uc_crc16_control_bit[8-l_uc_counter] = 0x01;
+1054   4                              }
+1055   3                              else{
+1056   4                                      l_uc_crc16_top_byte_register = (l_uc_crc16_top_byte_register << 1);
+1057   4                                      l_uc_crc16_control_bit[8-l_uc_counter] = 0x00;
+1058   4                              }
+1059   3                                      
+1060   3                              l_uc_counter--;      
+1061   3                      }
+1062   2          
+1063   2                      //To create CRC16 polynomial tables
+1064   2                      l_us_temp_crc16_poly = 0x0000;    
+1065   2      
+1066   2                      for (l_uc_counter = 0x00; l_uc_counter < 0x08; l_uc_counter++){
+1067   3                              if (l_uc_crc16_control_bit[l_uc_counter]) //if the control bit is one          
+1068   3                                      l_us_temp_crc16_poly ^= (str_obdh_data.us_crc16_poly << (7-l_uc_counter));
+1069   3                      }
+1070   2      
+1071   2                      g_us_crc16_table[l_us_top_byte] = l_us_temp_crc16_poly;
+1072   2                      
+1073   2                      for (l_uc_counter = 0x00; l_uc_counter < 0x08; l_uc_counter++){
+1074   3                              l_uc_crc16_control_bit[l_uc_counter] = 0x00;                    
+1075   3                      }
+1076   2              }
+1077   1      }       
+1078          #endif
+1079          
+1080          //------------------------------------------------------------------------------------
+1081          // Memory Block Pointer Initialization
+1082          //------------------------------------------------------------------------------------
+1083          // Function's test result: fully functional     (tested in Dev C++)
+1084          //------------------------------------------------------------------------------------
+1085          void initBlockPointer (void)
+1086          {
+1087   1              str_bp.ul_hk_write_p                             = SD_BP_HK_START;
+1088   1              str_bp.ul_datalog_write_p                        = SD_BP_DATALOG_START;
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 19  
+
+1089   1              str_bp.ul_package_recovery_write_p       = SD_BP_PACKAGE_RECOVERY_START;
+1090   1              str_bp.ul_eventlog_write_p                       = SD_BP_EVENTLOG_START;//dec22_yc
+1091   1              str_bp.uc_orbit_indexing_overwritten = 0x00;
+1092   1              str_bp.uc_hk_overwritten                         = 0x00;
+1093   1      }
+1094          
+1095          //------------------------------------------------------------------------------------
+1096          // OBDH Paramaters' Initialization
+1097          //------------------------------------------------------------------------------------
+1098          // Function's test result: untested
+1099          //------------------------------------------------------------------------------------
+1100          void initOBDHParameters (void)
+1101          {
+1102   1              unsigned char l_uc_i = 0;
+1103   1      
+1104   1              //Initialize OBDH SSCP values
+1105   1              str_obdh_par.uc_manual_control_enabled                  = 0;    //At first, the satellite is in the auto-mode
+1106   1              str_obdh_par.uc_no_of_interrupt_per_s                   = 200;
+1107   1              str_obdh_par.uc_gsch_time_window_10s                    = THRESHOLD_GSCH_TIME_WINDOW_DEFAULT_S/10;
+1108   1              str_obdh_par.uc_soc_threshold[0]                                = THRESHOLD_SOC_M3_TO_M4_DEFAULT;
+1109   1              str_obdh_par.uc_soc_threshold[1]                                = THRESHOLD_SOC_M4_TO_M3_DEFAULT;
+1110   1              str_obdh_par.uc_soc_threshold[2]                                = THRESHOLD_SOC_M7_TO_M8_DEFAULT;
+1111   1              str_obdh_par.uc_soc_threshold[3]                                = THRESHOLD_SOC_LISTEN_MCC_DEFAULT;
+1112   1              str_obdh_par.uc_soc_threshold[4]                                = THRESHOLD_SOC_TURN_OFF_COMM_DEFAULT;
+1113   1              str_obdh_par.uc_soc_threshold[5]                                = 0;
+1114   1              str_obdh_par.uc_soc_threshold[6]                                = THRESHOLD_SOC_RESET_SAT_DEFAULT;
+1115   1              str_obdh_par.uc_soc_threshold[7]                                = 0;
+1116   1              str_obdh_par.us_rev_time_s                                              = 5700; //Initialize satellite revolution time as 5700s (95 minutes)
+1117   1      
+1118   1              //Initialize log data mission parameters
+1119   1              for (l_uc_i = 0; l_uc_i < MAX_NO_OF_DATA_TYPE_LOGGED; l_uc_i++)
+1120   1                      str_obdh_par.us_log_data_id[l_uc_i]             = 0x0000;
+1121   1      
+1122   1              str_obdh_par.us_br_threshold_low[0]                             = THRESHOLD_BR_X_LOW_DEFAULT;
+1123   1              str_obdh_par.us_br_threshold_low[1]                             = THRESHOLD_BR_Y_LOW_DEFAULT;
+1124   1              str_obdh_par.us_br_threshold_low[2]                             = THRESHOLD_BR_Z_LOW_DEFAULT;
+1125   1              str_obdh_par.us_br_threshold_high[0]                    = THRESHOLD_BR_X_HIGH_DEFAULT;
+1126   1              str_obdh_par.us_br_threshold_high[1]                    = THRESHOLD_BR_Y_HIGH_DEFAULT;
+1127   1              str_obdh_par.us_br_threshold_high[2]                    = THRESHOLD_BR_Z_HIGH_DEFAULT;
+1128   1              str_obdh_par.uc_beacon_interval[0]                              = CW_BEACON_INTERVAL_M3;
+1129   1              str_obdh_par.uc_beacon_interval[1]                              = CW_BEACON_INTERVAL_M4_M5_M7;
+1130   1              str_obdh_par.uc_beacon_interval[2]                              = CW_BEACON_INTERVAL_M8;
+1131   1              str_obdh_par.uc_beacon_interval[3]                              = CW_BEACON_INTERVAL_COMM_ZONE;
+1132   1              str_obdh_par.ul_det_uptime_limit_s                              = TIME_LIMIT_DET_UPTIME_INITIAL_S;
+1133   1      }
+1134          
+1135          #if (TASK_ENABLE == 1)
+1136          //------------------------------------------------------------------------------------
+1137          // Task Flags' Initialization
+1138          //------------------------------------------------------------------------------------
+1139          // Function's test result: untested
+1140          //------------------------------------------------------------------------------------
+1141          void initTaskFlags (void)
+1142          {
+1143   1              unsigned char l_uc_i;
+1144   1      
+1145   1              for (l_uc_i = 0; l_uc_i < SCRIPTLINE_TIMER_SIZE; l_uc_i++){
+1146   2                      str_scriptline_timer[l_uc_i].uc_scriptspace_owner       = SP_SCRIPTSPACE_EMPTY;
+1147   2                      str_scriptline_timer[l_uc_i].uc_scriptline_owner        = 0x00;
+1148   2                      str_scriptline_timer[l_uc_i].uc_started                         = 0x00;
+1149   2                      str_scriptline_timer[l_uc_i].uc_counter                         = 0x00;
+1150   2                      str_scriptline_timer[l_uc_i].ul_timer                           = 0x00000000;
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 20  
+
+1151   2              }
+1152   1      
+1153   1              for (l_uc_i = 0; l_uc_i < TASK_SIZE; l_uc_i++){
+1154   2                      //Simplification of the task reset (deleting the redundancy)
+1155   2                      resetTask(l_uc_i);
+1156   2      
+1157   2                      //So long as it is within the semi-permanent script space,
+1158   2                      //assign dedicated script space for a task
+1159   2                      if (l_uc_i < SEMI_PERMANENT_SCRIPTSPACE_SIZE)
+1160   2                              str_task[l_uc_i].uc_scriptspace                                         = l_uc_i;
+1161   2                      //Else, assign the last scriptspace for that task
+1162   2                      else str_task[l_uc_i].uc_scriptspace                                    = SCRIPTSPACE_SIZE-1;
+1163   2              }
+1164   1      
+1165   1              for (l_uc_i = 0; l_uc_i < SCRIPTLINE_RETRY_COUNTER_SIZE; l_uc_i++){
+1166   2                      str_scriptline_retry_counter[l_uc_i].uc_scriptspace_owner       = SP_SCRIPTSPACE_EMPTY;
+1167   2                      str_scriptline_retry_counter[l_uc_i].uc_scriptline_owner        = 0x00;
+1168   2                      str_scriptline_retry_counter[l_uc_i].uc_counter                         = 0x00;
+1169   2              }
+1170   1      }
+1171          
+1172          //------------------------------------------------------------------------------------
+1173          // Task's script Initialization
+1174          //------------------------------------------------------------------------------------
+1175          // Function's test result: untested
+1176          //------------------------------------------------------------------------------------
+1177          void initTaskScript (void){
+1178   1              unsigned char l_uc_i = 0;
+1179   1              unsigned char l_uc_j = 0;
+1180   1              unsigned char l_uc_k = 0;
+1181   1      
+1182   1              for (l_uc_i = 0; l_uc_i < SCRIPTSPACE_SIZE; l_uc_i++)
+1183   1                      for (l_uc_j = 0; l_uc_j < MAX_SCRIPTLINE_SIZE; l_uc_j++)
+1184   1                              for (l_uc_k = 0; l_uc_k < MAX_SCRIPT_LENGTH; l_uc_k++)  
+1185   1                                      str_scriptspace[l_uc_i].uc_script[l_uc_j][l_uc_k] = 0;
+1186   1      
+1187   1              //Various task's scripts initialization
+1188   1              initGetHKScript();
+1189   1              initDeployAntennaScript();
+1190   1              initLogSTDataScript();
+1191   1              initTestTKScript();
+1192   1      }
+1193          
+1194          //------------------------------------------------------------------------------------
+1195          // Get housekeeping script Initialization
+1196          //------------------------------------------------------------------------------------
+1197          // Function's test result: untested
+1198          //------------------------------------------------------------------------------------
+1199          void initGetHKScript (void)
+1200          {
+1201   1              unsigned char l_uc_i;
+1202   1              unsigned char l_uc_running_no = 0;
+1203   1      
+1204   1      //------------------------------------------------------------------------------------
+1205   1              //--------------------------------------------------------------------------------
+1206   1              // Init get all housekeeping task's script
+1207   1              //--------------------------------------------------------------------------------
+1208   1              // Scriptline 0                 : to change the subtask's flags accordingly
+1209   1              //      mode used                       : normal running task (00000)
+1210   1              //      intended change         : 0000 0000 0000 1110 (0x000E)
+1211   1              //--------------------------------------------------------------------------------
+1212   1              enterScriptline(SP_SCRIPTSPACE_GET_HK,l_uc_running_no++,SCRIPT_CMD_CHANGE_TASK_FLAGS,0x00,0x00,0x0E);
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 21  
+
+1213   1      
+1214   1              //--------------------------------------------------------------------------------
+1215   1              // Scriptline 1                 : to get HK Data
+1216   1              // Properties                   : timed, non-last, non-critical: 100x xxxx (0x80)
+1217   1              // Interval used                : no. 0                 (xxx0 0000) - 0x00
+1218   1              // Completed end doing  : nothing               (0000) - 0
+1219   1              // Error end doing              : nothing               (0000) - 0
+1220   1              // Channel dependency   : nothing
+1221   1              // CD fail end doing    : nothing               (0000) - 0
+1222   1              // Argument                             : nothing               (0000) - 0
+1223   1              //--------------------------------------------------------------------------------
+1224   1              str_obdh_data.us_interval_period[0] = 100; //The interval is the value (100) x 100 ms = 10s
+1225   1              enterScriptline(SP_SCRIPTSPACE_GET_HK,l_uc_running_no++,SCRIPT_CMD_GET_HK                       ,0x80,0x00,0x00);
+1226   1      
+1227   1              //--------------------------------------------------------------------------------
+1228   1              // Scriptline 2                 : to store HK Data
+1229   1              // Properties                   : timed, non-last, non-critical: 100x xxxx (0x80)
+1230   1              // Interval used                : no. 1                 (xxx0 0001) - 0x01
+1231   1              // Completed end doing  : nothing               (0000) - 0
+1232   1              // Error end doing              : nothing               (0000) - 0
+1233   1              // Channel dependency   : nothing
+1234   1              // CD fail end doing    : nothing               (0000) - 0
+1235   1              // Argument                             : nothing               (0000) - 0
+1236   1              //--------------------------------------------------------------------------------
+1237   1              str_obdh_data.us_interval_period[1] = 600; //The interval is the value (600) x 100 ms = 60s
+1238   1              enterScriptline(SP_SCRIPTSPACE_GET_HK,l_uc_running_no++,SCRIPT_CMD_STORE_HK                     ,0x81,0x00,0x00);
+1239   1      
+1240   1              //--------------------------------------------------------------------------------
+1241   1              // Scriptline 3                 : to get SSCP Data
+1242   1              // Properties                   : timed, non-last, non-critical: 100x xxxx (0x80)
+1243   1              // Interval used                : no. 3                 (xxx0 0011) - 0x03
+1244   1              // Completed end doing  : nothing               (0000) - 0
+1245   1              // Error end doing              : nothing               (0000) - 0
+1246   1              // Channel dependency   : nothing
+1247   1              // CD fail end doing    : nothing               (0000) - 0
+1248   1              // Argument                             : nothing               (0000) - 0
+1249   1              //--------------------------------------------------------------------------------
+1250   1              str_obdh_data.us_interval_period[3] = 100; //The interval is the value (100) x 100 ms = 10s
+1251   1              enterScriptline(SP_SCRIPTSPACE_GET_HK,l_uc_running_no++,SCRIPT_CMD_GET_SSCP                     ,0x83,0x00,0x00);
+1252   1      
+1253   1              //Pad the rests of the script to zero
+1254   1              for (l_uc_i = l_uc_running_no; l_uc_i < MAX_SCRIPTLINE_SIZE; l_uc_i++) //Put zero for the rests
+1255   1                      enterScriptline(SP_SCRIPTSPACE_GET_HK,l_uc_i,0x00,0x00,0x00,0x00);
+1256   1      //------------------------------------------------------------------------------------
+1257   1      }
+1258          
+1259          //------------------------------------------------------------------------------------
+1260          // Deploy antenna script initialization
+1261          //------------------------------------------------------------------------------------
+1262          // Function's test result: untested
+1263          //------------------------------------------------------------------------------------
+1264          void initDeployAntennaScript (void)
+1265          {
+1266   1              unsigned char l_uc_i;
+1267   1              unsigned char l_uc_running_no = 0;
+1268   1      
+1269   1      //------------------------------------------------------------------------------------
+1270   1              //--------------------------------------------------------------------------------
+1271   1              // Set DPLY channel to ON
+1272   1              //--------------------------------------------------------------------------------
+1273   1              // Scriptline 0                 : to set a PWRS' channel state
+1274   1              // Properties                   : non-timed, non-last, critical: 001x xxxx (0x20)
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 22  
+
+1275   1              // Interval used                : NA                    (xxx0 0000) - 0x00
+1276   1              // Completed end doing  : progress (1)  (1001) - 9
+1277   1              // Error end doing              : nothing               (0000) - 0
+1278   1              // Channel dependency   : nothing
+1279   1              // Argument                             : turn ON,              (1000) - 8
+1280   1              //                                                channel 3     (0011) - 3
+1281   1              //--------------------------------------------------------------------------------
+1282   1              enterScriptline(SP_SCRIPTSPACE_DEPLOY_ANTENNA,l_uc_running_no++,SCRIPT_CMD_SET_SINGLE_PWRS_CHANNEL,0x20,0
+             -x90,0x83);
+1283   1      
+1284   1              //--------------------------------------------------------------------------------
+1285   1              // Check DPLY channel's status, whether it has been turned ON
+1286   1              //--------------------------------------------------------------------------------
+1287   1              // Scriptline 1                 : to check a PWRS' channel status
+1288   1              // Properties                   : timed, non-last, non-critical: 100x xxxx (0x80)
+1289   1              // Interval used                : 7                     (xxx0 0111) - 0x07
+1290   1              // Completed end doing  : progress (1)  (1001) - 9
+1291   1              // Error end doing              : regress (1)   (0001) - 1
+1292   1              // Channel dependency   : nothing
+1293   1              // Argument                             : turn ON               (1000) - 8
+1294   1              //                                                channel 3 bit (1000) - 8
+1295   1              //--------------------------------------------------------------------------------
+1296   1              str_obdh_data.us_interval_period[7] = 40; //The interval is the value (40) x 100 ms = 4s
+1297   1              enterScriptline(SP_SCRIPTSPACE_DEPLOY_ANTENNA,l_uc_running_no++,SCRIPT_CMD_CHECK_SINGLE_PWRS_CHANNEL,0x87
+             -,0x91,0x88);
+1298   1      
+1299   1              //--------------------------------------------------------------------------------
+1300   1              // Arm and starts antenna deployment mechanism
+1301   1              //--------------------------------------------------------------------------------
+1302   1              // Scriptline 2                 : to arm and starts antenna deployment mechanism
+1303   1              // Properties                   : non-timed, non-last, non-critical: 001x xxxx (0x00)
+1304   1              // Interval used                : NA                    (xxx0 0000) - 0x00
+1305   1              // Completed end doing  : progress (1)  (1001) - 9
+1306   1              // Error end doing              : progress (2)  (1010) - A
+1307   1              // Channel dependency   : nothing
+1308   1              // Argument                             : nothing
+1309   1              //--------------------------------------------------------------------------------
+1310   1              enterScriptline(SP_SCRIPTSPACE_DEPLOY_ANTENNA,l_uc_running_no++,SCRIPT_CMD_ANTENNA_AUTO_DPLY,0x00,0x9A,0x
+             -00);
+1311   1      
+1312   1              //--------------------------------------------------------------------------------
+1313   1              // To check antenna deployment status
+1314   1              //--------------------------------------------------------------------------------
+1315   1              // Scriptline 3                 : to check antenna deployment status
+1316   1              // Properties                   : timed, non-last, non-critical: 100x xxxx (0x80)
+1317   1              // Interval used                : 8                     (xxx0 1000) - 0x08
+1318   1              // Completed end doing  : progress (1)  (1001) - 9
+1319   1              // Error end doing              : progress (1)  (1001) - 9
+1320   1              // Channel dependency   : nothing
+1321   1              // Argument                             : nothing
+1322   1              //--------------------------------------------------------------------------------
+1323   1              str_obdh_data.us_interval_period[8] = 50; //The interval is the value (50) x 100 ms = 5s
+1324   1              enterScriptline(SP_SCRIPTSPACE_DEPLOY_ANTENNA,l_uc_running_no++,SCRIPT_CMD_CHECK_ANTENNA_DPLY_STAT,0x88,0
+             -x99,0x00);
+1325   1      
+1326   1              //--------------------------------------------------------------------------------
+1327   1              // Set DPLY channel to OFF
+1328   1              //--------------------------------------------------------------------------------
+1329   1              // Scriptline 4                 : to set a PWRS' channel state
+1330   1              // Properties                   : non-timed, non-last, critical: 001x xxxx (0x20)
+1331   1              // Interval used                : NA                    (xxx0 0000) - 0x00
+1332   1              // Completed end doing  : progress (1)  (1001) - 9
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 23  
+
+1333   1              // Error end doing              : nothing               (0000) - 0
+1334   1              // Channel dependency   : nothing
+1335   1              // Argument                             : turn OFF,             (0000) - 0
+1336   1              //                                                channel 3     (0011) - 3
+1337   1              //--------------------------------------------------------------------------------
+1338   1              enterScriptline(SP_SCRIPTSPACE_DEPLOY_ANTENNA,l_uc_running_no++,SCRIPT_CMD_SET_SINGLE_PWRS_CHANNEL,0x20,0
+             -x90,0x03);
+1339   1      
+1340   1              //--------------------------------------------------------------------------------
+1341   1              // Check DPLY channel's status, whether it has been turned OFF
+1342   1              //--------------------------------------------------------------------------------
+1343   1              // Scriptline 5                 : to check a PWRS' channel status
+1344   1              // Properties                   : timed, last, non-critical: 110x xxxx (0xC0)
+1345   1              // Interval used                : 9                     (xxx0 1001) - 0x09
+1346   1              // Completed end doing  : nothing               (0000) - 0
+1347   1              // Error end doing              : regress (1)   (0001) - 1
+1348   1              // Channel dependency   : nothing
+1349   1              // Argument                             : turn OFF              (0000) - 0
+1350   1              //                                                channel 3 bit (1000) - 8
+1351   1              //--------------------------------------------------------------------------------
+1352   1              str_obdh_data.us_interval_period[9] = 40; //The interval is the value (40) x 100 ms = 4s
+1353   1              enterScriptline(SP_SCRIPTSPACE_DEPLOY_ANTENNA,l_uc_running_no++,SCRIPT_CMD_CHECK_SINGLE_PWRS_CHANNEL,0xC9
+             -,0x01,0x08);
+1354   1      
+1355   1              //Pad the rests of the script to zero
+1356   1              for (l_uc_i = l_uc_running_no; l_uc_i < MAX_SCRIPTLINE_SIZE; l_uc_i++) //Put zero for the rests
+1357   1                      enterScriptline(SP_SCRIPTSPACE_DEPLOY_ANTENNA,l_uc_i,0x00,0x00,0x00,0x00);
+1358   1      //------------------------------------------------------------------------------------
+1359   1      }
+1360          
+1361          //------------------------------------------------------------------------------------
+1362          // Log special telemetry data script Initialization
+1363          //------------------------------------------------------------------------------------
+1364          // Function's test result: untested
+1365          //------------------------------------------------------------------------------------
+1366          void initLogSTDataScript (void)
+1367          {
+1368   1              unsigned char l_uc_i;
+1369   1              unsigned char l_uc_running_no = 0;
+1370   1      
+1371   1      //------------------------------------------------------------------------------------
+1372   1              //--------------------------------------------------------------------------------
+1373   1              // Init log data task's script
+1374   1              //--------------------------------------------------------------------------------
+1375   1              // Scriptline 0                 : to initialize logging data task
+1376   1              // Properties                   : non-timed, non-last, non-critical: 000x xxxx (0x00)
+1377   1              // Interval used                : NA                    (xxx0 0000) - 0x00
+1378   1              // Completed end doing  : progress (1)  (1001) - 9
+1379   1              // Error end doing              : nothing               (0000) - 0
+1380   1              // Channel dependency   : nothing
+1381   1              // CD fail end doing    : nothing               (0000) - 0
+1382   1              // Argument                             : nothing               (0000) - 0
+1383   1              //--------------------------------------------------------------------------------
+1384   1              enterScriptline(SP_SCRIPTSPACE_LOG_ST_DATA,l_uc_running_no++,SCRIPT_CMD_INIT_LOG_DATA,0x00,0x90,0x00);
+1385   1      
+1386   1              //--------------------------------------------------------------------------------
+1387   1              // Log data task's script
+1388   1              //--------------------------------------------------------------------------------
+1389   1              // Scriptline 1                 : to log data
+1390   1              // Properties                   : timed, non-last, non-critical: 100x xxxx (0x80)
+1391   1              // Interval used                : 2                             (xxx0 0010) - 0x02
+1392   1              // Completed end doing  : progress (1)  (1001) - 9
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 24  
+
+1393   1              // Error end doing              : nothing               (0000) - 0
+1394   1              // Channel dependency   : nothing
+1395   1              // CD fail end doing    : nothing               (0000) - 0
+1396   1              // Argument                             : nothing               (0000) - 0
+1397   1              //--------------------------------------------------------------------------------
+1398   1              str_obdh_data.us_interval_period[2] = 10; //The interval is the value (10) x 100 ms = 1s
+1399   1              enterScriptline(SP_SCRIPTSPACE_LOG_ST_DATA,l_uc_running_no++,SCRIPT_CMD_LOG_DATA,0x82,0x90,0x00);
+1400   1      
+1401   1              //--------------------------------------------------------------------------------
+1402   1              // To terminate log data task
+1403   1              //--------------------------------------------------------------------------------
+1404   1              // Scriptline 2                 : to terminate log data task
+1405   1              // Properties                   : non-timed, last, non-critical: 010x xxxx (0x40)
+1406   1              // Interval used                : NA                    (xxx0 0000) - 0x00
+1407   1              // Completed end doing  : nothing               (0000) - 0
+1408   1              // Error end doing              : nothing               (0000) - 0
+1409   1              // Channel dependency   : nothing
+1410   1              // CD fail end doing    : nothing               (0000) - 0
+1411   1              // Argument                             : nothing               (0000) - 0
+1412   1              //--------------------------------------------------------------------------------
+1413   1              enterScriptline(SP_SCRIPTSPACE_LOG_ST_DATA,l_uc_running_no++,SCRIPT_CMD_TERMINATE_LOG_DATA,0x40,0x00,0x00
+             -);
+1414   1      
+1415   1              //Pad the rests of the script to zero
+1416   1              for (l_uc_i = l_uc_running_no; l_uc_i < MAX_SCRIPTLINE_SIZE; l_uc_i++) //Put zero for the rests
+1417   1                      enterScriptline(SP_SCRIPTSPACE_LOG_ST_DATA,l_uc_i,0x00,0x00,0x00,0x00);
+1418   1      //------------------------------------------------------------------------------------
+1419   1      }
+1420          
+1421          //------------------------------------------------------------------------------------
+1422          // Test thermal knife script Initialization
+1423          //------------------------------------------------------------------------------------
+1424          // Function's test result: untested
+1425          //------------------------------------------------------------------------------------
+1426          void initTestTKScript (void)
+1427          {
+1428   1              unsigned char l_uc_i;
+1429   1              unsigned char l_uc_running_no = 0;
+1430   1      
+1431   1      //------------------------------------------------------------------------------------
+1432   1              //--------------------------------------------------------------------------------
+1433   1              // Set DPLY channel to ON
+1434   1              //--------------------------------------------------------------------------------
+1435   1              // Scriptline 0                 : to set a PWRS' channel state
+1436   1              // Properties                   : non-timed, non-last, critical: 001x xxxx (0x20)
+1437   1              // Interval used                : NA                    (xxx0 0000) - 0x00
+1438   1              // Completed end doing  : progress (1)  (1001) - 9
+1439   1              // Error end doing              : nothing               (0000) - 0
+1440   1              // Channel dependency   : nothing
+1441   1              // Argument                             : turn ON,              (1000) - 8
+1442   1              //                                                channel 3     (0011) - 3
+1443   1              //--------------------------------------------------------------------------------
+1444   1              enterScriptline(SP_SCRIPTSPACE_TEST_TK,l_uc_running_no++,SCRIPT_CMD_SET_SINGLE_PWRS_CHANNEL,0x20,0x90,0x8
+             -3);
+1445   1      
+1446   1              //--------------------------------------------------------------------------------
+1447   1              // Check DPLY channel's status, whether it has been turned ON
+1448   1              //--------------------------------------------------------------------------------
+1449   1              // Scriptline 1                 : to check a PWRS' channel status
+1450   1              // Properties                   : timed, non-last, non-critical: 100x xxxx (0x80)
+1451   1              // Interval used                : 7                     (xxx0 0111) - 0x07
+1452   1              // Completed end doing  : progress (1)  (1001) - 9
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 25  
+
+1453   1              // Error end doing              : regress (1)   (0001) - 1
+1454   1              // Channel dependency   : nothing
+1455   1              // Argument                             : turn ON               (1000) - 8
+1456   1              //                                                channel 3 bit (1000) - 8
+1457   1              //--------------------------------------------------------------------------------
+1458   1              str_obdh_data.us_interval_period[7] = 40; //The interval is the value (40) x 100 ms = 4s
+1459   1              enterScriptline(SP_SCRIPTSPACE_TEST_TK,l_uc_running_no++,SCRIPT_CMD_CHECK_SINGLE_PWRS_CHANNEL,0x87,0x91,0
+             -x88);
+1460   1      
+1461   1              //--------------------------------------------------------------------------------
+1462   1              // Set thermal knife's to ON
+1463   1              //--------------------------------------------------------------------------------
+1464   1              // Scriptline 2                 : to set thermal knife's state
+1465   1              // Properties                   : non-timed, non-last, critical: 001x xxxx (0x20)
+1466   1              // Interval used                : NA                    (xxx0 0000) - 0x00
+1467   1              // Completed end doing  : progress 1    (1001) - 9
+1468   1              // Error end doing              : nothing               (0000) - 0
+1469   1              // Channel dependency   : nothing
+1470   1              // CD fail end doing    : nothing               (0000) - 0
+1471   1              // Argument                             : turn ON               (0001) - 1
+1472   1              //--------------------------------------------------------------------------------
+1473   1              enterScriptline(SP_SCRIPTSPACE_TEST_TK,l_uc_running_no++,SCRIPT_CMD_SET_TK_CHANNEL,0x20,0x90,0x01);
+1474   1      
+1475   1              //--------------------------------------------------------------------------------
+1476   1              // Check thermal knife's enable flag, whether its channel has been turned ON
+1477   1              //--------------------------------------------------------------------------------
+1478   1              // Scriptline 3                 : to check thermal knife's enable flag
+1479   1              // Properties                   : timed, non-last, non-critical: 100x xxxx (0x80)
+1480   1              // Interval used                : 4                     (xxx0 0100) - 0x04
+1481   1              // Completed end doing  : progress (1)  (1001) - 9
+1482   1              // Error end doing              : regress (1)   (0001) - 1
+1483   1              // Channel dependency   : nothing
+1484   1              // CD fail end doing    : nothing               (0000) - 0
+1485   1              // Argument                             : turn ON               (0001) - 1
+1486   1              //--------------------------------------------------------------------------------
+1487   1              str_obdh_data.us_interval_period[4] = 10; //The interval is the value (10) x 100 ms = 1s
+1488   1              enterScriptline(SP_SCRIPTSPACE_TEST_TK,l_uc_running_no++,SCRIPT_CMD_CHECK_TK_CHANNEL,0x84,0x91,0x01);
+1489   1      
+1490   1              //--------------------------------------------------------------------------------
+1491   1              // Check thermal knife's cutting flag, whether it has been cut
+1492   1              //--------------------------------------------------------------------------------
+1493   1              // Scriptline 4                 : to check thermal knife's cutting flag
+1494   1              // Properties                   : timed, non-last, non-critical: 100x xxxx (0x80)
+1495   1              // Interval used                : 5                     (xxx0 0101) - 0x05
+1496   1              // Completed end doing  : progress (1)  (1001) - 9
+1497   1              // Error end doing              : progress (1)  (1001) - 9
+1498   1              // Channel dependency   : nothing
+1499   1              // CD fail end doing    : nothing               (0000) - 0
+1500   1              // Argument                             : Cut                   (0002) - 2
+1501   1              //--------------------------------------------------------------------------------
+1502   1              str_obdh_data.us_interval_period[5] = 10; //The interval is the value (10) x 100 ms = 1s
+1503   1              enterScriptline(SP_SCRIPTSPACE_TEST_TK,l_uc_running_no++,SCRIPT_CMD_CHECK_TK_CUT,0x85,0x99,0x02);
+1504   1      
+1505   1              //--------------------------------------------------------------------------------
+1506   1              // Set thermal knife's to OFF
+1507   1              //--------------------------------------------------------------------------------
+1508   1              // Scriptline 5                 : to set thermal knife's state
+1509   1              // Properties                   : non-timed, non-last, critical: 001x xxxx (0x20)
+1510   1              // Interval used                : NA                    (xxx0 0000) - 0x00
+1511   1              // Completed end doing  : progress (1)  (1001) - 9
+1512   1              // Error end doing              : nothing               (0000) - 0
+1513   1              // Channel dependency   : nothing
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 26  
+
+1514   1              // CD fail end doing    : nothing               (0000) - 0
+1515   1              // Argument                             : turn OFF              (0000) - 0
+1516   1              //--------------------------------------------------------------------------------
+1517   1              enterScriptline(SP_SCRIPTSPACE_TEST_TK,l_uc_running_no++,SCRIPT_CMD_SET_TK_CHANNEL,0x20,0x90,0x00);
+1518   1      
+1519   1              //--------------------------------------------------------------------------------
+1520   1              // Set DPLY channel to OFF
+1521   1              //--------------------------------------------------------------------------------
+1522   1              // Scriptline 6                 : to set a PWRS' channel state
+1523   1              // Properties                   : non-timed, non-last, critical: 001x xxxx (0x20)
+1524   1              // Interval used                : NA                    (xxx0 0000) - 0x00
+1525   1              // Completed end doing  : progress (1)  (1001) - 9
+1526   1              // Error end doing              : nothing               (0000) - 0
+1527   1              // Channel dependency   : nothing
+1528   1              // Argument                             : turn OFF,             (0000) - 0
+1529   1              //                                                channel 3     (0011) - 3
+1530   1              //--------------------------------------------------------------------------------
+1531   1              enterScriptline(SP_SCRIPTSPACE_TEST_TK,l_uc_running_no++,SCRIPT_CMD_SET_SINGLE_PWRS_CHANNEL,0x20,0x90,0x0
+             -3);
+1532   1      
+1533   1              //--------------------------------------------------------------------------------
+1534   1              // Check DPLY channel's status, whether it has been turned OFF
+1535   1              //--------------------------------------------------------------------------------
+1536   1              // Scriptline 7                 : to check a PWRS' channel status
+1537   1              // Properties                   : timed, last, non-critical: 110x xxxx (0xC0)
+1538   1              // Interval used                : 9                     (xxx0 1001) - 0x09
+1539   1              // Completed end doing  : nothing               (0000) - 0
+1540   1              // Error end doing              : regress (1)   (0001) - 1
+1541   1              // Channel dependency   : nothing
+1542   1              // Argument                             : turn OFF              (0000) - 0
+1543   1              //                                                channel 3 bit (1000) - 8
+1544   1              //--------------------------------------------------------------------------------
+1545   1              str_obdh_data.us_interval_period[9] = 40; //The interval is the value (40) x 100 ms = 4s
+1546   1              enterScriptline(SP_SCRIPTSPACE_TEST_TK,l_uc_running_no++,SCRIPT_CMD_CHECK_SINGLE_PWRS_CHANNEL,0xC9,0x01,0
+             -x08);
+1547   1      
+1548   1              //Pad the rests of the script to zero
+1549   1              for (l_uc_i = l_uc_running_no; l_uc_i < MAX_SCRIPTLINE_SIZE; l_uc_i++) //Put zero for the rests
+1550   1                      enterScriptline(SP_SCRIPTSPACE_TEST_TK,l_uc_i,0x00,0x00,0x00,0x00);
+1551   1      //------------------------------------------------------------------------------------
+1552   1      }
+1553          #endif
+1554          
+1555          //------------------------------------------------------------------------------------
+1556          // Scheduler Initialization
+1557          //------------------------------------------------------------------------------------
+1558          // Function's test result: untested
+1559          //------------------------------------------------------------------------------------
+1560          void initScheduler (void)
+1561          {
+1562   1              unsigned char l_uc_i = 0;
+1563   1              unsigned char l_uc_j = 0;
+1564   1      
+1565   1              //Delete whatever data in the schedule
+1566   1              for (l_uc_i = 0; l_uc_i < SCHEDULER_BLOCK_SIZE; l_uc_i++){
+1567   2                      str_scheduler.uc_reindexing[l_uc_i]                     = 0; //Is made consistent with scheduler's function
+1568   2                      str_scheduler.ul_scheduled_time[l_uc_i]         = 0;
+1569   2                      str_scheduler.us_cmd[l_uc_i]                            = 0;
+1570   2                      str_scheduler.uc_arg_length[l_uc_i]             = 0;
+1571   2                      for (l_uc_j = 0; l_uc_j < MAX_SCHEDULER_ARG; l_uc_j++)
+1572   2                              str_scheduler.uc_arg[l_uc_i][l_uc_j]    = 0;
+1573   2              }
+C51 COMPILER V9.02   LUXP_INIT                                                             01/09/2014 12:21:18 PAGE 27  
+
+1574   1              
+1575   1              //Create initial schedules
+1576   1              #if (SATELLITE_SCHEDULE_HANDLER_ENABLE == 1)
+1577   1              #if (TEST_SCHEDULER_ENABLE == 1)
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_ON,  20);
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_OFF, 22);
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_ON,  24);
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_OFF, 26);
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_ON,  28);
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_OFF, 30);
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_ON,  32);
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_OFF, 34);
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_ON,  36);
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_OFF, 38);
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_ON,  40);
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_OFF, 42);
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_ON,  44);
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_OFF, 46);
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_ON,  48);
+                      scheduleSingleChannel (ADS_CHANNEL, CHANNEL_OFF, 50);
+                      #endif
+1595   1              #endif
+1596   1      }
+1597          
+1598          #if (CQUEUE_ENABLE == 1)
+              //------------------------------------------------------------------------------------
+              // OBDH Command Queue Initialization
+              //------------------------------------------------------------------------------------
+              // Function's test result: untested
+              //------------------------------------------------------------------------------------
+              void initOBDHCQueue (void)
+              {
+                      unsigned short l_us_i;
+                      unsigned short l_us_j;
+                      
+                      //Put all command queue element as zero (no command)
+                      for (l_us_i = 0; l_us_i < COMMAND_QUEUE_SIZE; l_us_i++)
+                              for (l_us_j = 0; l_us_j < COMMAND_LENGTH; l_us_j++)
+                                      g_uc_command_queue[l_us_i][l_us_j] = 0;
+              
+                      for (l_us_j = 0; l_us_j < COMMAND_LENGTH; l_us_j++)
+                              g_uc_command_entry[l_us_j] = 0;
+              }
+              #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2683    ----
+   CONSTANT SIZE    =      8    ----
+   XDATA SIZE       =   ----      30
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

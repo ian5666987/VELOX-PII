@@ -1,0 +1,928 @@
+C51 COMPILER V9.02   LUXP_INTERRUPTS                                                       01/09/2014 12:21:18 PAGE 1   
+
+
+C51 COMPILER V9.02, COMPILATION OF MODULE LUXP_INTERRUPTS
+NO OBJECT MODULE REQUESTED
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE luxp_interrupts.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+*** WARNING C500 IN LINE 1 OF LUXP_INTERRUPTS.C: LICENSE ERROR (R20D: CONTENT ERROR IN FLF FILE)
+
+   1          //------------------------------------------------------------------------------------
+   2          // Luxp_interrupts.c
+   3          //------------------------------------------------------------------------------------
+   4          // Copyright (C) 2013 Nanyang Technological University.
+   5          //
+   6          // AUTH: IAN
+   7          // DATE: 03 APR 2013
+   8          //
+   9          // The program Luxp_interrupts.c will be downloaded to the Pumpkin Motherboard with 
+  10          // C8051F120 uC as part of the VELOX-P Pico-Satellite Flight Software. 
+  11          //
+  12          // This file contains all functions related to interrupts of the Flight Software
+  13          //
+  14          //------------------------------------------------------------------------------------
+  15          // Overall functional test status
+  16          //------------------------------------------------------------------------------------
+  17          // Completely tested, partially functional with warnings
+  18          //
+  19          //------------------------------------------------------------------------------------
+  20          // Overall documentation status
+  21          //------------------------------------------------------------------------------------
+  22          // Averagely documented
+  23          //------------------------------------------------------------------------------------
+  24          
+  25          //------------------------------------------------------------------------------------
+  26          // List of functions                            | Test status                                   | Documentation
+  27          //------------------------------------------------------------------------------------
+  28          // ISRTimer1                                            | Tested, fully functional              | Average       
+  29          // ISRTimer2                                            | Tested, fully functional              | Average       
+  30          // ISRTimer3                                            | Tested, fully functional              | Average       
+  31          // ISRTimer4                                            | Tested, fully functional              | Average       
+  32          // ISRSMBus                                                     | Tested, functional (w)                | Average       
+  33          // ISRUART0                                                     | Tested, fully functional              | Average       
+  34          // ISRUART1                                                     | Tested, fully functional              | Average       
+  35          // ISRSPI                                                       | Tested, fully functional              | Average       
+  36          //------------------------------------------------------------------------------------
+  37          
+  38          #include <luxp_interrupts.h>
+  39          
+  40          //------------------------------------------------------------------------------------
+  41          // Interrupt Service Routine Functions
+  42          //------------------------------------------------------------------------------------
+  43          
+  44          //------------------------------------------------------------------------------------
+  45          // Timer3 Interrupt
+  46          //------------------------------------------------------------------------------------
+  47          // Function's test result: fully functional
+  48          //------------------------------------------------------------------------------------
+  49          void ISRTimer3 (void) interrupt 14
+  50          {
+  51   1              char SFRPAGE_SAVE = SFRPAGE;        // Save Current SFR page
+  52   1      
+  53   1              SFRPAGE = SMB0_PAGE;
+  54   1      
+C51 COMPILER V9.02   LUXP_INTERRUPTS                                                       01/09/2014 12:21:18 PAGE 2   
+
+  55   1              SMB0CN &= ~0x40;                    // Disable SMBus
+  56   1              SMB0CN |= 0x40;                     // Re-enable SMBus
+  57   1      
+  58   1              SFRPAGE = SFRPAGE_SAVE;             // Switch back to the Timer3 SFRPAGE
+  59   1      
+  60   1              TF3 = 0;                            // Clear Timer3 interrupt-pending flag
+  61   1      }
+  62          
+  63          //------------------------------------------------------------------------------------
+  64          // Timer4 Interrupt
+  65          //------------------------------------------------------------------------------------
+  66          // Function's test result: fully functional
+  67          //------------------------------------------------------------------------------------
+  68          void ISRTimer4 (void) interrupt 16
+  69          {
+  70   1              //Static variables
+  71   1              static unsigned char l_uc_no_of_beacon_check = 0;
+  72   1              static unsigned char l_uc_beacon_time_interrupt_counter = 0;
+  73   1      
+  74   1              #if (BODY_RATE_HANDLER_ENABLE == 1)
+  75   1              #if (ADCS_CMD_ENABLE == 1)
+  76   1              #if (PWRS_CMD_ENABLE == 1)
+  77   1              static unsigned char l_uc_brh_counter_s = 0;
+  78   1              #endif
+  79   1              #endif
+  80   1              #endif
+  81   1      
+  82   1          #if (IDLE_MODE_HANDLER_ENABLE == 1)
+  83   1          #if (PWRS_CMD_ENABLE == 1)
+  84   1              static unsigned char l_uc_imh_counter_s = 0;
+  85   1              #endif
+  86   1              #endif
+  87   1      
+  88   1              //Non-static local variables
+  89   1              unsigned char l_uc_i;
+  90   1      
+  91   1              //Enable Watchdog timer (when enabled)
+  92   1              #if (WDT_ENABLE == 1)
+  93   1              unsigned char SFRPAGE_SAVE = SFRPAGE;
+  94   1      
+  95   1              SFRPAGE = CONFIG_PAGE; 
+  96   1              WDTCN = 0x07;           //setting WDT interval bit7=0 bits[2:0] set to 111      
+  97   1              WDTCN = 0xA5;           //Enable/Reset WDT
+  98   1              SFRPAGE = SFRPAGE_SAVE;
+  99   1              #endif
+ 100   1      
+ 101   1              //For function timing
+ 102   1              if (g_uc_combn_flag & STMR_FLAG_COUNT_START)    
+ 103   1                      g_us_timer_flag_counter++;
+ 104   1              else g_us_timer_flag_counter = 0;
+ 105   1      
+ 106   1              //The "elegant" way to program the timeout mechanism is not yet implemented
+ 107   1              //Due to uncertainty of the requirement of final program. But with certainty,
+ 108   1              //more "elegant" and "code-size-saving" method is preferred.
+ 109   1      
+ 110   1              //To set I2C bus lines free in the event of error (due to stuck)
+ 111   1              if (g_us_i2c_flag & I2C_FLAG_BUS_RECOVERY_ATTEMPT){
+ 112   2                      g_uc_i2c_bus_sda_held_low_recovery_timeout_counter++;
+ 113   2                      if (g_uc_i2c_bus_sda_held_low_recovery_timeout_counter > TIME_LIMIT_I2C_BUS_RECOVERY_OFL){
+ 114   3                              g_uc_i2c_bus_sda_held_low_recovery_timeout_counter = 0;
+ 115   3                              g_us_i2c_flag |= I2C_FLAG_BUS_SDA_HELD_LOW_RECOVERY_TIMEOUT;
+ 116   3                      }
+C51 COMPILER V9.02   LUXP_INTERRUPTS                                                       01/09/2014 12:21:18 PAGE 3   
+
+ 117   2              }
+ 118   1              else g_uc_i2c_bus_sda_held_low_recovery_timeout_counter = 0;
+ 119   1      
+ 120   1              //To finish I2C bus SCL line held high if it does not give positive response
+ 121   1              if (g_us_i2c_flag & I2C_FLAG_BUS_SCL_HELD_HIGH_RECOVERY_ATTEMPT){
+ 122   2                      g_uc_i2c_bus_scl_held_high_recovery_timeout_counter++;
+ 123   2                      if(g_uc_i2c_bus_scl_held_high_recovery_timeout_counter > TIME_LIMIT_I2C_BUS_SCL_HIGH_RECOVERY_OFL){
+ 124   3                              g_uc_i2c_bus_scl_held_high_recovery_timeout_counter = 0;
+ 125   3                              g_us_i2c_flag |= I2C_FLAG_BUS_SCL_HELD_HIGH_RECOVERY_TIMEOUT;
+ 126   3                      }
+ 127   2              }
+ 128   1              else g_uc_i2c_bus_scl_held_high_recovery_timeout_counter = 0;
+ 129   1      
+ 130   1              //To give time limit for SPI busy status
+ 131   1              if (g_uc_spit0ad0_flag & SPI_FLAG_BUSY_START){
+ 132   2                      g_uc_spi_busy_timeout_counter++;
+ 133   2                      if(g_uc_spi_busy_timeout_counter > TIME_LIMIT_SPI_BUS_BUSY_OFL){
+ 134   3                              g_uc_spi_busy_timeout_counter = 0;
+ 135   3                              g_uc_spit0ad0_flag |= SPI_FLAG_BUSY_TIMEOUT;
+ 136   3                      }
+ 137   2              }
+ 138   1              else g_uc_spi_busy_timeout_counter = 0;
+ 139   1      
+ 140   1              //To give time limit for SPI transmission status
+ 141   1              if (g_uc_spit0ad0_flag & SPI_FLAG_TRANSMISSION_START){
+ 142   2                      g_uc_spi_transmission_timeout_counter++;
+ 143   2                      if(g_uc_spi_transmission_timeout_counter > TIME_LIMIT_SPI_BUS_TRANSMISSION_OFL){
+ 144   3                              g_uc_spi_transmission_timeout_counter = 0;
+ 145   3                              g_uc_spit0ad0_flag |= SPI_FLAG_TRANSMISSION_TIMEOUT;
+ 146   3                      }
+ 147   2              }
+ 148   1              else g_uc_spi_transmission_timeout_counter = 0;
+ 149   1      
+ 150   1              //Set UART Busy timeout
+ 151   1              if (g_uc_combn_flag & UART_FLAG_RX_BUSY){                                                       //If g_b_uart_rx_busy is set, that is, there is receiving
+             - UART transmission occurring
+ 152   2                      if (g_uc_uart_busy_timeout_counter < TIME_LIMIT_UART_BUSY_OFL)                                  
+ 153   2                              g_uc_uart_busy_timeout_counter++;               //If UART waiting is still within time limit, increase the counter
+ 154   2                      else {                                                                          //else set UART timeout and release the UART line
+ 155   3                              g_uc_combn_flag |= UART_FLAG_RX_BUSY_TIMEOUT;                   //Set UART time out flag
+ 156   3                              g_uc_uart_busy_timeout_counter = 0;             //Reset UART time out counter
+ 157   3                              g_uc_combn_flag &= ~UART_FLAG_RX_BUSY;  //Release the UART line
+ 158   3                              g_uc_combn_flag |= USIP_FLAG_READY;
+ 159   3                      }
+ 160   2              }
+ 161   1              else g_uc_uart_busy_timeout_counter = 0;                //If UART_FLAG_RX_BUSY is not set, keep the counter zero
+ 162   1      
+ 163   1              //Set SMB transmission timeout (maximum time OBDH may send data to other subsystem)
+ 164   1              if (g_us_i2c_flag & I2C_FLAG_TRANSMISSION_START){                               //When a waiting for transmission from other subsyst
+             -em occurs
+ 165   2                      if (g_uc_i2c_transmission_timeout_counter < TIME_LIMIT_I2C_TRANSMISSION_OFL)    
+ 166   2                              g_uc_i2c_transmission_timeout_counter++;
+ 167   2                      else {
+ 168   3                              g_us_i2c_flag |= I2C_FLAG_TRANSMISSION_TIMEOUT;
+ 169   3                              g_uc_i2c_transmission_timeout_counter = 0;
+ 170   3                      }
+ 171   2              }
+ 172   1              else g_uc_i2c_transmission_timeout_counter = 0; //If there is no SMB transmission, keep g_uc_i2c_transmis
+             -sion_timeout_counter to zero
+ 173   1      
+ 174   1              //Set SMB busy timeout (maximum time OBDH waiting for SM Bus to be freed)
+ 175   1              if (g_us_i2c_flag & I2C_FLAG_BUSY_START){       //When a waiting for SM Bus line to be freed to initiates a tra
+C51 COMPILER V9.02   LUXP_INTERRUPTS                                                       01/09/2014 12:21:18 PAGE 4   
+
+             -nsmission
+ 176   2                      if (g_uc_i2c_busy_timeout_counter < TIME_LIMIT_I2C_BUSY_OFL)    
+ 177   2                              g_uc_i2c_busy_timeout_counter++;
+ 178   2                      else {
+ 179   3                              g_us_i2c_flag |= I2C_FLAG_BUSY_TIMEOUT;
+ 180   3                              g_uc_i2c_busy_timeout_counter = 0;
+ 181   3                      }
+ 182   2              }
+ 183   1              else g_uc_i2c_busy_timeout_counter = 0; //If there is no waiting for SM Bus to be freed keep g_uc_i2c_bus
+             -y_timeout_counter to zero
+ 184   1      
+ 185   1              //Set SMB receiving timeout (maximum time a subsystem may send data and halt OBDH program)
+ 186   1              if (g_us_i2c_flag & I2C_FLAG_RECEIVING_START){  //When a waiting for transmission from other subsystem occ
+             -urs
+ 187   2                      if (g_uc_i2c_receiving_timeout_counter < TIME_LIMIT_I2C_RECEIVING_OFL)  
+ 188   2                              g_uc_i2c_receiving_timeout_counter++;
+ 189   2                      else {
+ 190   3                              g_us_i2c_flag |= I2C_FLAG_RECEIVING_TIMEOUT;
+ 191   3                              g_uc_i2c_receiving_timeout_counter = 0;
+ 192   3                      }
+ 193   2              }
+ 194   1              else g_uc_i2c_receiving_timeout_counter = 0;    //If there is no SMB transmission, keep g_uc_i2c_transmissio
+             -n_timeout_counter to zero
+ 195   1      
+ 196   1              //If timer0 is running 
+ 197   1              if (g_uc_spit0ad0_flag & TIMER0_FLAG_WAIT){
+ 198   2                      if (g_uc_timer0_stuck_counter < TIME_LIMIT_TIMER0_STUCK_OFL)
+ 199   2                              g_uc_timer0_stuck_counter++;
+ 200   2                      else{
+ 201   3                              g_uc_spit0ad0_flag |= TIMER0_FLAG_WAIT_TIMEOUT;
+ 202   3                              g_uc_timer0_stuck_counter = 0;
+ 203   3                      }
+ 204   2              }
+ 205   1              else g_uc_timer0_stuck_counter = 0;
+ 206   1      
+ 207   1              //If A2D conversion is running for too long, raise timeout flag
+ 208   1              if (g_uc_spit0ad0_flag & AD0INT_FLAG_START){
+ 209   2                      if (g_uc_ad0int_counter < TIME_LIMIT_A2D_CONVERSION)
+ 210   2                              g_uc_ad0int_counter++;
+ 211   2                      else{
+ 212   3                              g_uc_spit0ad0_flag |= AD0INT_FLAG_TIMEOUT;
+ 213   3                              g_uc_ad0int_counter = 0;
+ 214   3                      }
+ 215   2              }
+ 216   1              else g_uc_ad0int_counter = 0;
+ 217   1      
+ 218   1              //For task timing 
+ 219   1              //If there is any flag tasks counting flag is raised, increase the counter value for it
+ 220   1              //If the counter rises to more than SOFTWARE_TIMER_RATE_MS/5, increase the timer value
+ 221   1              //Else, keeps the flag tasks counter and timer to zero
+ 222   1              for (l_uc_i = 0; l_uc_i < SCRIPTLINE_TIMER_SIZE; l_uc_i++){
+ 223   2                      if (str_scriptline_timer[l_uc_i].uc_started){
+ 224   3                              str_scriptline_timer[l_uc_i].uc_counter++;
+ 225   3                              //By default, every 100 ms, timer value will be increased
+ 226   3                              //Ian (2012-05-15): this interrupt is called once every 5 miliseconds. There the magic constant 5 comes
+             - from.
+ 227   3                              if (str_scriptline_timer[l_uc_i].uc_counter >= SOFTWARE_TIMER_RATE_MS/5){
+ 228   4                                      str_scriptline_timer[l_uc_i].uc_counter = 0;
+ 229   4                                      str_scriptline_timer[l_uc_i].ul_timer++;
+ 230   4                              }
+ 231   3                      }
+ 232   2              }
+C51 COMPILER V9.02   LUXP_INTERRUPTS                                                       01/09/2014 12:21:18 PAGE 5   
+
+ 233   1      
+ 234   1              //For beacon status checking
+ 235   1              if (str_obdh_hk.us_beacon_flag & BEACON_FLAG_ENABLE){
+ 236   2                      //Increase beacon time interrupt counter
+ 237   2                      l_uc_beacon_time_interrupt_counter++;
+ 238   2      
+ 239   2                      //If the interrupt counter has shown that 200ms has passed
+ 240   2                      if (l_uc_beacon_time_interrupt_counter >= (str_obdh_par.uc_no_of_interrupt_per_s/NO_OF_BEACON_CHECK_PER_
+             -S)){
+ 241   3                              //Reset beacon time interrupt counter
+ 242   3                              l_uc_beacon_time_interrupt_counter = 0;
+ 243   3      
+ 244   3                              //Set beacon checking flag
+ 245   3                              str_obdh_hk.us_beacon_flag |= BEACON_FLAG_CHECK;
+ 246   3      
+ 247   3                              //Increase checking interrupt
+ 248   3                              l_uc_no_of_beacon_check++;
+ 249   3      
+ 250   3                              //Increase the time how long it has been since last checking here
+ 251   3                              if (l_uc_no_of_beacon_check >= NO_OF_BEACON_CHECK_PER_S){
+ 252   4                                      l_uc_no_of_beacon_check = 0;
+ 253   4                                      g_uc_beacon_time_since_last_timeout_sending++;
+ 254   4                                      if (g_uc_beacon_time_since_last_timeout_sending >= g_uc_beacon_interval){
+ 255   5                                              //Limit the time that its value should not blow up
+ 256   5                                              g_uc_beacon_time_since_last_timeout_sending = g_uc_beacon_interval;
+ 257   5                                              //Raise up beacon timeout flag when it reaches timeout
+ 258   5                                              str_obdh_hk.us_beacon_flag |= BEACON_FLAG_TIMEOUT;
+ 259   5                                      }
+ 260   4                              }
+ 261   3                      }
+ 262   2              }
+ 263   1              //Else, reset all counters
+ 264   1              else {
+ 265   2                      l_uc_beacon_time_interrupt_counter = 0;
+ 266   2                      l_uc_no_of_beacon_check = 0;
+ 267   2                      g_uc_beacon_time_since_last_timeout_sending = 0;
+ 268   2              }
+ 269   1      
+ 270   1              //For constant satellite tick timing (ticking every interrupt)
+ 271   1              str_obdh_data.uc_timer4_interrupt_counter++;
+ 272   1      
+ 273   1              //If one second has passed, this loop acts as a global software timer
+ 274   1              if (str_obdh_data.uc_timer4_interrupt_counter >= str_obdh_par.uc_no_of_interrupt_per_s){
+ 275   2                      str_obdh_data.uc_timer4_interrupt_counter = 0;
+ 276   2      
+ 277   2                      //Update time elapsed after last auto orbit change every second
+ 278   2                      str_obdh_data.us_rev_offset_time++;
+ 279   2      
+ 280   2                      //Updata time elapsed since last communication with MCC, only valid if COMM is ON
+ 281   2                      if (str_pwrs_data.uc_channel_status & COMM_CHANNEL_BIT) g_ul_gsch_time_elapsed_since_last_communication_
+             -with_mcc++;
+ 282   2      
+ 283   2                      //Increase time lapse counter for all subsystems update (in systemUpdateAndMonitor) since the last updat
+             -e
+ 284   2                      g_uc_adcs_time_lapse_from_last_update_s++;
+ 285   2                      g_uc_pwrs_time_lapse_from_last_update_s++;
+ 286   2                      g_uc_rtc_time_lapse_from_last_update_s++;
+ 287   2                      g_uc_pwrs_time_lapse_from_last_ch_stat_update_s++;
+ 288   2                      g_uc_comm_time_lapse_from_last_update_s++;
+ 289   2                      g_uc_antenna_status_check_from_last_update_s++;
+ 290   2                      g_us_obdh_time_lapse_from_last_save_state_s++;
+ 291   2      
+C51 COMPILER V9.02   LUXP_INTERRUPTS                                                       01/09/2014 12:21:18 PAGE 6   
+
+ 292   2                      //So long as we are in the safe mode, or we are in the Groundpass while the previous mode is safe-mode
+ 293   2                      //this counter will be counting up every second. Else, it will be reset every second.
+ 294   2                      if (str_obdh_hk.uc_sat_mode == SATELLITE_MODE_M4 || str_obdh_hk.uc_sat_mode == SATELLITE_MODE_M8 || (str
+             -_obdh_hk.uc_sat_mode == SATELLITE_MODE_M6 && str_obdh_data.uc_previous_mode == SATELLITE_MODE_M8)) 
+ 295   2                              g_ul_smh_time_register++;
+ 296   2                      else g_ul_smh_time_register = 0;
+ 297   2      
+ 298   2                      //So long as the satellite is in the idle mode, this counter will be increased every second
+ 299   2                      if (str_obdh_hk.uc_sat_mode == SATELLITE_MODE_M3 || str_obdh_hk.uc_sat_mode == SATELLITE_MODE_M5 || (str
+             -_obdh_hk.uc_sat_mode == SATELLITE_MODE_M6 && str_obdh_data.uc_previous_mode == SATELLITE_MODE_M5)) 
+ 300   2                              g_ul_idle_time_register++;
+ 301   2                      else g_ul_idle_time_register = 0;
+ 302   2      
+ 303   2                      //To calculate ADS uptime (only valid when latest channel update is successful)
+ 304   2                      if (!g_us_latest_ch_stat_update_ec && (str_pwrs_data.uc_channel_status & ADS_CHANNEL_BIT))
+ 305   2                              //Increase its value
+ 306   2                              g_ul_ads_uptime_s++;
+ 307   2                      //If ADS is OFF, of course the uptime will always be zero
+ 308   2                      else if (!g_us_latest_ch_stat_update_ec && !(str_pwrs_data.uc_channel_status & ADS_CHANNEL_BIT))
+ 309   2                              g_ul_ads_uptime_s = 0;
+ 310   2                      
+ 311   2                      #if (BODY_RATE_HANDLER_ENABLE == 1)
+ 312   2                      #if (ADCS_CMD_ENABLE == 1)
+ 313   2                      #if (PWRS_CMD_ENABLE == 1)
+ 314   2                      //To calculate detumbling mode uptime 
+ 315   2                      //only valid when BRH is ready and detumbling is found to be ON
+ 316   2                      if ((str_obdh_hk.us_brh_flag & BRH_FLAG_READY) && (str_obdh_hk.us_brh_flag & BRH_FLAG_DET_ON)){
+ 317   3                              //Increase Detumbling mode uptime value
+ 318   3                              g_ul_det_uptime_s++;
+ 319   3      
+ 320   3                              //If the Detumbling mode uptime has reached its limit
+ 321   3                              if (g_ul_det_uptime_s >= str_obdh_par.ul_det_uptime_limit_s)
+ 322   3                                      //Set BRH_FLAG_BR_ST_TO flag
+ 323   3                                      str_obdh_hk.us_brh_flag |= BRH_FLAG_BR_ST_TO;
+ 324   3                      }
+ 325   2                      //If BRH is not ready, keep the uptime be zero
+ 326   2                      else g_ul_det_uptime_s = 0;
+ 327   2                      
+ 328   2                      //For BRH checking
+ 329   2                      if (str_obdh_hk.us_brh_flag & BRH_FLAG_ENABLE){
+ 330   3                              //Increase BRH counter
+ 331   3                              l_uc_brh_counter_s++;
+ 332   3      
+ 333   3                              //If it is time to check BRH, raise its checking flag
+ 334   3                              if (l_uc_brh_counter_s > BRH_CHECK_PERIOD){
+ 335   4                                      l_uc_brh_counter_s = 0;
+ 336   4                                      str_obdh_hk.us_brh_flag |= BRH_FLAG_CHECK;
+ 337   4                              }                       
+ 338   3                      }
+ 339   2                      //Else, reset its counter and its check flag
+ 340   2                      else {
+ 341   3                              l_uc_brh_counter_s = 0;
+ 342   3                              str_obdh_hk.us_brh_flag &= ~BRH_FLAG_CHECK;
+ 343   3                      }
+ 344   2      
+ 345   2                      //If currently BRH is waiting for Detumbling to be turned to wanted state
+ 346   2                      if ((str_obdh_hk.us_brh_flag & BRH_FLAG_DET_WT) && (g_uc_brh_wait_det_time_s < TIME_LIMIT_WAITING_DET_S)
+             -)
+ 347   2                              //Increase Detumbling mode change waiting time
+ 348   2                              g_uc_brh_wait_det_time_s++;
+ 349   2                      //Else if currently BRH is waiting for ADCS detumbling mode to be turned to wanted state for too long
+ 350   2                      else if ((str_obdh_hk.us_brh_flag & BRH_FLAG_DET_WT) && (g_uc_brh_wait_det_time_s >= TIME_LIMIT_WAITING_
+C51 COMPILER V9.02   LUXP_INTERRUPTS                                                       01/09/2014 12:21:18 PAGE 7   
+
+             -DET_S))
+ 351   2                              //Set Detumbling state timeout flag
+ 352   2                              str_obdh_hk.us_brh_flag |= BRH_FLAG_DET_TO;
+ 353   2                      //Else, if currently waiting flag is not set
+ 354   2                      else
+ 355   2                              //Reset Detumbling mode waiting time
+ 356   2                              g_uc_brh_wait_det_time_s = 0;
+ 357   2                      #endif
+ 358   2                      #endif
+ 359   2                      #endif
+ 360   2      
+ 361   2                      #if (IDLE_MODE_HANDLER_ENABLE == 1)
+ 362   2                      #if (PWRS_CMD_ENABLE == 1)
+ 363   2                      //For IMH checking
+ 364   2                      if (str_obdh_hk.us_imh_flag & IMH_FLAG_ENABLE){
+ 365   3                              //Increase IMH counter
+ 366   3                              l_uc_imh_counter_s++;
+ 367   3      
+ 368   3                              //If it is time to check IMH, raise its checking flag
+ 369   3                              if (l_uc_imh_counter_s > IMH_CHECK_PERIOD){
+ 370   4                                      l_uc_imh_counter_s = 0;
+ 371   4                                      str_obdh_hk.us_imh_flag |= IMH_FLAG_CHECK;
+ 372   4                              }                       
+ 373   3                      }
+ 374   2                      //Else, reset its counter and its check flag
+ 375   2                      else {
+ 376   3                              l_uc_imh_counter_s = 0;
+ 377   3                              str_obdh_hk.us_imh_flag &= ~IMH_FLAG_CHECK;
+ 378   3                      }
+ 379   2      
+ 380   2                      //If currently IMH is waiting for ADS to be turned to wanted state
+ 381   2                      if ((str_obdh_hk.us_imh_flag & IMH_FLAG_ADS_WT) && (g_uc_imh_wait_ads_time_s < TIME_LIMIT_WAITING_ADS_S)
+             -)
+ 382   2                              //Increase ADS waiting time
+ 383   2                              g_uc_imh_wait_ads_time_s++;
+ 384   2                      //Else if currently IMH is waiting for ADS to be turned to wanted state for too long
+ 385   2                      else if ((str_obdh_hk.us_imh_flag & IMH_FLAG_ADS_WT) && (g_uc_imh_wait_ads_time_s >= TIME_LIMIT_WAITING_
+             -ADS_S))
+ 386   2                              //Set ADS turn ON timeout flag
+ 387   2                              str_obdh_hk.us_imh_flag |= IMH_FLAG_ADS_TO;
+ 388   2                      //Else, if currently waiting flag is not set
+ 389   2                      else
+ 390   2                              //Reset ADS waiting time
+ 391   2                              g_uc_imh_wait_ads_time_s = 0;
+ 392   2                      #endif
+ 393   2                      #endif
+ 394   2      
+ 395   2                      //If it has passed the time to revolute once, update the reference orbit no.
+ 396   2                      if (str_obdh_data.us_rev_offset_time >= str_obdh_par.us_rev_time_s){
+ 397   3                              str_obdh_data.us_rev_offset_time = 0;
+ 398   3                              str_obdh_data.us_auto_reference_rev_no++;
+ 399   3                      }
+ 400   2      
+ 401   2                      //Update OBC time every second
+ 402   2                      str_obdh_data.ul_obc_time_s++;
+ 403   2      
+ 404   2                      //Time to update the satellite time
+ 405   2                      g_uc_evha_flag |= EVENT_FLAG_SAT_INFO_TO_UPDATE;
+ 406   2      
+ 407   2                      //To decrease mission mode time register value
+ 408   2                      if (g_us_mission_time_register) g_us_mission_time_register--;
+ 409   2      
+C51 COMPILER V9.02   LUXP_INTERRUPTS                                                       01/09/2014 12:21:18 PAGE 8   
+
+ 410   2                      //Check beacon handler error (if any)
+ 411   2                      if (g_uc_beacon_error_counter <= TIME_LIMIT_BEACON_ERROR_S && (str_obdh_hk.us_beacon_flag & BEACON_FLAG_
+             -ERROR))
+ 412   2                              g_uc_beacon_error_counter++;
+ 413   2      
+ 414   2                      //Time to check GDSN command buffer, if currently there is no checking happening
+ 415   2                      if (!(g_uc_gsch_flag & GSCH_FLAG_CHECK_RESET))
+ 416   2                              g_uc_gsch_flag |= GSCH_FLAG_INITIAL_CHECK;      //Initial validation checking
+ 417   2      
+ 418   2                      //If Groundpass state has been started, update g_us_groundpass_time_register
+ 419   2                      if((g_uc_gsch_flag & GSCH_FLAG_GROUNDPASS_STARTED) && (g_us_groundpass_time_register < TIME_LIMIT_GROUND
+             -_PASS_S))
+ 420   2                              g_us_groundpass_time_register++;
+ 421   2      
+ 422   2                      //If transitional state is occuring
+ 423   2                      if (g_uc_gsch_flag & GSCH_FLAG_MONITOR_TRANSITIONAL)
+ 424   2                              g_us_gsch_monitoring_transitional_period++;
+ 425   2                      else g_us_gsch_monitoring_transitional_period = 0;
+ 426   2      
+ 427   2                      //g_uc_sd_load_data_timeout_counter update        
+ 428   2                      if(g_uc_sd_load_data_timeout_counter < TIME_LIMIT_LOAD_DATA_S)
+ 429   2                              g_uc_sd_load_data_timeout_counter++;
+ 430   2                      
+ 431   2                      //If (g_uc_strsnd_flag & STRNG_FLAG_SAVE_DATA_HOLD) && g_uc_save_data_hold_timeout_counter < TIME_LIMIT_
+             -SAVE_DATA_HOLD_S
+ 432   2                      if ((g_uc_strsnd_flag & STRNG_FLAG_SAVE_DATA_HOLD) && g_uc_save_data_hold_timeout_counter < TIME_LIMIT_S
+             -AVE_DATA_HOLD_S)
+ 433   2                              g_uc_save_data_hold_timeout_counter++;          
+ 434   2                      else if(g_uc_save_data_hold_timeout_counter >= TIME_LIMIT_SAVE_DATA_HOLD_S){
+ 435   3                              g_uc_strsnd_flag &= ~STRNG_FLAG_SAVE_DATA_HOLD;
+ 436   3                              g_uc_save_data_hold_timeout_counter = 0;
+ 437   3                      }
+ 438   2      
+ 439   2                      //Check log data task's running flag, and its second script's (log data script) running flag
+ 440   2                      if ((str_task[TASK_LOG_ST_DATA].uc_status & TASK_RUNNING_FLAG) && g_us_log_data_elapsed_time_s < TIME_LI
+             -MIT_LOG_DATA_S && (str_task[TASK_LOG_ST_DATA].uc_script_running_flags & 0x02))
+ 441   2                              g_us_log_data_elapsed_time_s++;
+ 442   2      
+ 443   2                      //Check thermal knife task's running flag and its fourth script's (thermal knife enable) running flag
+ 444   2                      if ((str_task[TASK_TEST_TK].uc_status & TASK_RUNNING_FLAG) && (str_task[TASK_TEST_TK].uc_script_running_
+             -flags & 0x08)){
+ 445   3                              if (g_uc_tk_waiting_s < TIME_LIMIT_TK_WAITING_S+5)
+ 446   3                                      g_uc_tk_waiting_s++;
+ 447   3                      }
+ 448   2                      else g_uc_tk_waiting_s = 0;
+ 449   2      
+ 450   2                      //Check thermal knife task's running flag and its fifth script's (thermal knife cut) running flag
+ 451   2                      if ((str_task[TASK_TEST_TK].uc_status & TASK_RUNNING_FLAG) && (str_task[TASK_TEST_TK].uc_script_running_
+             -flags & 0x10)){
+ 452   3                              if (g_uc_tk_uptime_s < TIME_LIMIT_TK_CUTTING_S+5)
+ 453   3                                      g_uc_tk_uptime_s++;
+ 454   3                      }
+ 455   2                      else g_uc_tk_uptime_s = 0;
+ 456   2      
+ 457   2                      //Check antenna deloyment task's running flag and its second script's (PWRS channel enable) or sixth scr
+             -ipt's (PWRS channel enable) running flag
+ 458   2                      if ((str_task[TASK_DEPLOY_ANTENNA].uc_status & TASK_RUNNING_FLAG) && ((str_task[TASK_DEPLOY_ANTENNA].uc_
+             -script_running_flags & 0x02) || (str_task[TASK_DEPLOY_ANTENNA].uc_script_running_flags & 0x20))){
+ 459   3                              if (g_uc_deployment_channel_waiting_s < TIME_LIMIT_DPLY_WAIITING_S+5)
+ 460   3                                      g_uc_deployment_channel_waiting_s++;
+ 461   3                      }
+ 462   2                      //Check thermal knife task's running flag and its second script's (PWRS channel enable) or eight script'
+C51 COMPILER V9.02   LUXP_INTERRUPTS                                                       01/09/2014 12:21:18 PAGE 9   
+
+             -s (PWRS channel enable) running flag
+ 463   2                      else if ((str_task[TASK_TEST_TK].uc_status & TASK_RUNNING_FLAG) && ((str_task[TASK_TEST_TK].uc_script_ru
+             -nning_flags & 0x02) || (str_task[TASK_TEST_TK].uc_script_running_flags & 0x80))){
+ 464   3                              if (g_uc_deployment_channel_waiting_s < TIME_LIMIT_DPLY_WAIITING_S+5)
+ 465   3                                      g_uc_deployment_channel_waiting_s++;
+ 466   3                      }
+ 467   2                      else g_uc_deployment_channel_waiting_s = 0;
+ 468   2      
+ 469   2                      //Check antenna deployment's task running flag and its fourth script's (antenna deployed) running flag
+ 470   2                      if ((str_task[TASK_DEPLOY_ANTENNA].uc_status & TASK_RUNNING_FLAG) && (str_task[TASK_DEPLOY_ANTENNA].uc_s
+             -cript_running_flags & 0x08)){
+ 471   3                              if (g_uc_antenna_deployment_waiting_s < (TIME_LIMIT_ANTENNA_WAIITING_S*4+30))
+ 472   3                                      g_uc_antenna_deployment_waiting_s++;
+ 473   3                      }
+ 474   2                      else g_uc_antenna_deployment_waiting_s = 0;
+ 475   2      
+ 476   2                      //Check sending time flag
+ 477   2                      if ((g_uc_gsch_flag & GSCH_FLAG_TOTAL_SENDING) && g_us_gsch_total_sending_time < TIME_LIMIT_GROUND_PASS_
+             -S)
+ 478   2                              g_us_gsch_total_sending_time++;
+ 479   2              }
+ 480   1      
+ 481   1              TF4 = 0; // Clear Timer4 interrupt-pending flag
+ 482   1      }
+ 483          
+ 484          //------------------------------------------------------------------------------------
+ 485          // SMBus Interrupt
+ 486          //------------------------------------------------------------------------------------
+ 487          // Function's test result: functional, but without being tested in all possible cases
+ 488          //------------------------------------------------------------------------------------
+ 489          void ISRSMBus (void) interrupt 7
+ 490          {
+ 491   1              unsigned char l_uc_fail = 0;    // Used by the ISR to flag failed transfers
+ 492   1      
+ 493   1              static unsigned char l_uc_sent_byte_counter = 1; //This does not use standard c indexing way for adjustme
+             -nt with g_us_i2c_transferred_byte_out purpose. If this uses standard c indexing way, g_us_i2c_transferred_byte_out would
+             - need to be adjusted to g_us_i2c_transferred_byte_out-1. Either way an adjustment will be needed.
+ 494   1              static unsigned char l_uc_rec_byte_counter = 1; //This does not use standard c indexing way for adjustmen
+             -t with g_us_i2c_transferred_byte_in purpose. If this uses standard c indexing way, g_us_i2c_transferred_byte_in would ne
+             -ed to be adjusted to g_us_i2c_transferred_byte_in-1 (and g_us_i2c_transferred_byte_in-1 to g_us_i2c_transferred_byte_in-
+             -2). Either way an adjustment will be needed.
+ 495   1              static unsigned char l_uc_no_of_trial = 0;
+ 496   1      
+ 497   1              // Status code for the SMBus (SMB0STA register)
+ 498   1              switch (SMB0STA)
+ 499   1              {
+ 500   2                      // Master Transmitter/Receiver: START condition transmitted.
+ 501   2                      // Load SMB0DAT with slave device address.
+ 502   2                      case SMB_START:
+ 503   2      
+ 504   2                      // Master Transmitter/Receiver: repeated START condition transmitted.
+ 505   2                      // Load SMB0DAT with slave device address
+ 506   2                      case SMB_RP_START:
+ 507   2                              SMB0DAT = g_uc_i2c_target;              // Load address of the slave.
+ 508   2                              SMB0DAT &= 0xFE;                        // Clear the LSB of the address for the R/W bit
+ 509   2                              SMB0DAT |= (unsigned char)(g_us_i2c_flag & I2C_FLAG_RW);                // Load R/W bit
+ 510   2                              STA = 0;                                        // Manually clear STA bit
+ 511   2      
+ 512   2                              l_uc_rec_byte_counter = 1;      // Reset the counter
+ 513   2                              l_uc_sent_byte_counter = 1;     // Reset the counter
+ 514   2      
+ 515   2                              break;
+C51 COMPILER V9.02   LUXP_INTERRUPTS                                                       01/09/2014 12:21:18 PAGE 10  
+
+ 516   2      
+ 517   2                      // Master Transmitter: Slave address + WRITE transmitted.  ACK received.
+ 518   2                      // For a READ: N/A
+ 519   2                      //
+ 520   2                      // For a WRITE: Send the first data byte to the slave.
+ 521   2                      case SMB_MTADDACK:
+ 522   2                      
+ 523   2                              //Fill SMB0DAT with first data byte, that is g_uc_i2c_data_out[0]
+ 524   2                              SMB0DAT = g_uc_i2c_data_out[l_uc_sent_byte_counter-1]; //send data byte
+ 525   2      
+ 526   2                              //Increase l_uc_sent_byte_counter to 2
+ 527   2                              l_uc_sent_byte_counter++;
+ 528   2      
+ 529   2                              //Reset l_uc_no_of_trial counter
+ 530   2                              l_uc_no_of_trial = 0;
+ 531   2      
+ 532   2                              break;
+ 533   2      
+ 534   2                      //Master Transmitter: Slave address + WRITE transmitted. NACK received.
+ 535   2                      //Restart the transfer.
+ 536   2              case SMB_MTADDNACK:
+ 537   2                              l_uc_no_of_trial++;
+ 538   2                              if (l_uc_no_of_trial < I2C_RESTART_TRIAL_LIMIT) STA = 1;  //Restart transfer, if it is within no of tri
+             -al limit
+ 539   2                              else {
+ 540   3                                      l_uc_no_of_trial = 0;   //reset no of trial
+ 541   3                                      STO = 1;                        //stops the I2C transmission
+ 542   3                                      g_us_i2c_flag &= ~I2C_FLAG_BUSY;       //free SMBus interface
+ 543   3                                      g_us_i2c_isr_error_code = EC_I2C_ISR_SLAVE_ADDR_NACK;   //Indicate that slave address is not acknowledge
+             -d
+ 544   3                                      g_us_i2c_flag |= I2C_FLAG_TRANSMISSION_TIMEOUT;
+ 545   3                              }
+ 546   2                              break;
+ 547   2      
+ 548   2                      //Master Transmitter: Data byte transmitted.  ACK received.
+ 549   2                      //For a READ: N/A
+ 550   2                      //
+ 551   2                      //For a WRITE: Send all data.  After the last data byte, send the stop bit.
+ 552   2                      case SMB_MTDBACK:
+ 553   2      
+ 554   2                              //If l_uc_sent_byte_counter <= g_uc_i2c_transferred_byte_out, keep sending
+ 555   2                              if (l_uc_sent_byte_counter <= g_uc_i2c_transferred_byte_out)
+ 556   2                              {
+ 557   3                                      //transfer data
+ 558   3                                      SMB0DAT = g_uc_i2c_data_out[l_uc_sent_byte_counter-1];
+ 559   3      
+ 560   3                                      //Increase the l_uc_sent_byte_counter for the next data byte
+ 561   3                                      l_uc_sent_byte_counter++;
+ 562   3                              }
+ 563   2      
+ 564   2                              else
+ 565   2                              {
+ 566   3                                      STO = 1;                                        //Set STO to terminate transfer
+ 567   3                                      g_us_i2c_flag &= ~I2C_FLAG_BUSY;                                //And free SMBus interface
+ 568   3                                      g_us_i2c_isr_error_code = EC_SUCCESSFUL;        //Indicates that I2C ISR transmission is successful
+ 569   3                              }
+ 570   2      
+ 571   2                              //Reset l_uc_no_of_trial counter
+ 572   2                              l_uc_no_of_trial = 0;
+ 573   2      
+ 574   2                              break;
+ 575   2      
+C51 COMPILER V9.02   LUXP_INTERRUPTS                                                       01/09/2014 12:21:18 PAGE 11  
+
+ 576   2                      // Master Transmitter: Data byte transmitted.  NACK received.
+ 577   2                      // Restart the transfer.
+ 578   2                      case SMB_MTDBNACK:
+ 579   2                              l_uc_no_of_trial++;     //Increase l_uc_no_of_trial counter
+ 580   2                              STA = 1;  //Restart transfer, if it is within no of trial limit
+ 581   2                              break;
+ 582   2      
+ 583   2                      // Master Receiver: Slave address + READ transmitted.  ACK received.
+ 584   2                      // For a READ: check if this is a one-byte transfer. if so, set the
+ 585   2                      //  NACK after the data byte is received to end the transfer. if not,
+ 586   2                      //  set the ACK and receive the other data bytes.
+ 587   2                      //
+ 588   2                      // For a WRITE: N/A
+ 589   2                      case SMB_MRADDACK:                      
+ 590   2                              if (l_uc_rec_byte_counter == g_uc_i2c_transferred_byte_in)
+ 591   2                              {                
+ 592   3                                      AA = 0;         // Only one byte in this transfer,
+ 593   3                              }
+ 594   2                              else
+ 595   2                              {
+ 596   3                                      AA = 1;         // More than one byte in this transfer, send ACK after byte is received
+ 597   3                              }
+ 598   2      
+ 599   2                              //Reset l_uc_no_of_trial counter
+ 600   2                              l_uc_no_of_trial = 0;
+ 601   2      
+ 602   2                              break;
+ 603   2      
+ 604   2                      // Master Receiver: Slave address + READ transmitted.  NACK received.
+ 605   2                      // Restart the transfer.
+ 606   2                      case SMB_MRADDNACK:
+ 607   2                              l_uc_no_of_trial++;
+ 608   2                              if (l_uc_no_of_trial < I2C_RESTART_TRIAL_LIMIT) STA = 1;  //Restart transfer, if it is within no of tri
+             -al limit
+ 609   2                              else {
+ 610   3                                      l_uc_no_of_trial = 0;   //reset l_uc_no_of_trial counter
+ 611   3                                      STO = 1;                                //stops the I2C transmission
+ 612   3                                      g_us_i2c_flag &= ~I2C_FLAG_BUSY;       //free SMBus interface
+ 613   3                                      g_us_i2c_isr_error_code = EC_I2C_ISR_SLAVE_ADDR_NACK;   //Indicate that slave address is not acknowledge
+             -d
+ 614   3                                      g_us_i2c_flag |= I2C_FLAG_TRANSMISSION_TIMEOUT; //Set SMB transmission timeout flag
+ 615   3                              }
+ 616   2                              break;
+ 617   2      
+ 618   2                      // Master Receiver: Data byte received.  ACK transmitted.
+ 619   2                      // For a READ: receive each byte from the slave.  if this is the last
+ 620   2                      // byte, send a NACK and set the STOP bit.
+ 621   2                      //
+ 622   2                      // For a WRITE: N/A
+ 623   2                      case SMB_MRDBACK:
+ 624   2                              if (l_uc_rec_byte_counter < (g_uc_i2c_transferred_byte_in-1))
+ 625   2                              {
+ 626   3                                      g_uc_i2c_data_in[l_uc_rec_byte_counter-1] = SMB0DAT; // Store received byte     
+ 627   3                                      AA = 1; // Send ACK to indicate byte received
+ 628   3                                      l_uc_rec_byte_counter++;        // Increment the byte counter                           
+ 629   3                              }
+ 630   2                              else
+ 631   2                              {
+ 632   3                                      g_uc_i2c_data_in[l_uc_rec_byte_counter-1] = SMB0DAT; // Store received byte     
+ 633   3                                      AA = 0; // Send NACK to indicate last byte of this transfer
+ 634   3                                      l_uc_rec_byte_counter++;        // Increment the byte counter           
+ 635   3                              }
+C51 COMPILER V9.02   LUXP_INTERRUPTS                                                       01/09/2014 12:21:18 PAGE 12  
+
+ 636   2      
+ 637   2                              //Reset l_uc_no_of_trial counter
+ 638   2                              l_uc_no_of_trial = 0;                                                                                      
+ 639   2                              
+ 640   2                              break;
+ 641   2      
+ 642   2                      // Master Receiver: Data byte received.  NACK transmitted.
+ 643   2                      // For a READ: Read operation has completed.  Read data register and
+ 644   2                      //  send STOP.
+ 645   2                      //
+ 646   2                      // For a WRITE: N/A
+ 647   2                      case SMB_MRDBNACK:
+ 648   2                              g_uc_i2c_data_in[l_uc_rec_byte_counter-1] = SMB0DAT; //Store received byte
+ 649   2                              STO = 1;                                        //Generate stop bit
+ 650   2                              AA = 1;                                         //Set AA for next transfer
+ 651   2                              g_us_i2c_flag &= ~I2C_FLAG_BUSY;                        //Free SMBus line
+ 652   2      
+ 653   2                              //Reset l_uc_no_of_trial counter
+ 654   2                              l_uc_no_of_trial = 0;
+ 655   2                              g_us_i2c_isr_error_code = EC_SUCCESSFUL;        //Indicates that I2C ISR transmission is successful                                                                                     
+             -   
+ 656   2      
+ 657   2                              break;
+ 658   2                              
+ 659   2                      // Master Transmitter: Arbitration lost.
+ 660   2                      case SMB_MTARBLOST:             
+ 661   2                              l_uc_fail = 1;  // Indicate failed transfer and handle at end of ISR
+ 662   2                              break;
+ 663   2                              
+ 664   2                      // Slave Receiver: Slave address + WRITE received.  ACK transmitted.
+ 665   2                      // Fall through.
+ 666   2                      case SMB_SROADACK:
+ 667   2                              
+ 668   2                      // Slave Receiver: General call address received.  ACK transmitted.
+ 669   2                      case SMB_SRGADACK:
+ 670   2                              l_uc_sent_byte_counter = 1;        // Reinitialize the data counters
+ 671   2                              l_uc_rec_byte_counter = 1;
+ 672   2                              break;
+ 673   2      
+ 674   2                      // Slave Receiver: Data byte received after addressed by general
+ 675   2                      // call address + WRITE.
+ 676   2                      // ACK transmitted.  Fall through.
+ 677   2                      case SMB_SRGDBACK:
+ 678   2      
+ 679   2                      // Slave Receiver: Data byte received after addressed by own
+ 680   2                      // slave address + WRITE.
+ 681   2                      // ACK transmitted.
+ 682   2                      // Receive each byte from the master.
+ 683   2                      // Ian (2012-05-15): AA = 1 is moved out of the if-else segment.
+ 684   2                      case SMB_SRODBACK:
+ 685   2                              if (l_uc_rec_byte_counter < g_uc_i2c_transferred_byte_in)
+ 686   2                              {
+ 687   3                                      g_uc_i2c_data_in[l_uc_rec_byte_counter-1] = SMB0DAT;    // Store incoming data
+ 688   3                                      l_uc_rec_byte_counter++;                        //Increase received byte counter                                
+ 689   3                              }
+ 690   2                              else
+ 691   2                              {
+ 692   3                                      //Ian (2012-05-15): this case does not increase the number of byte received.
+ 693   3                                      g_uc_i2c_data_in[l_uc_rec_byte_counter-1] = SMB0DAT; //Store incoming data (last byte)
+ 694   3                      g_us_i2c_flag |= I2C_FLAG_DATA_RECEIVED; //Indicate new data fully received
+ 695   3                  }
+ 696   2                              AA = 1;                                         //ACK received data
+C51 COMPILER V9.02   LUXP_INTERRUPTS                                                       01/09/2014 12:21:18 PAGE 13  
+
+ 697   2          
+ 698   2                              break;
+ 699   2      
+ 700   2                      // Slave Receiver: Data byte received while addressed as slave.
+ 701   2                      // NACK transmitted. Should not occur since AA will not be cleared
+ 702   2                      // as slave.  Fall through to next state.
+ 703   2                      case SMB_SRODBNACK:
+ 704   2      
+ 705   2                      // Slave Receiver: Data byte received while addressed by general call.
+ 706   2                      // NACK transmitted.
+ 707   2                      // Should not occur since AA will not be cleared as slave.
+ 708   2                      case SMB_SRGDBNACK:
+ 709   2                              AA = 1;
+ 710   2                              break;
+ 711   2      
+ 712   2                      // Slave Receiver: STOP or repeated START received while addressed as
+ 713   2                      // slave.
+ 714   2                      case SMB_SRSTOP:
+ 715   2                              break;
+ 716   2      
+ 717   2                      //All other status codes invalid.  Reset communication.
+ 718   2                      default:
+ 719   2                              l_uc_fail = 1;
+ 720   2                              break;
+ 721   2              }
+ 722   1      
+ 723   1              if (l_uc_fail)                                                  //If the transmission failed
+ 724   1              {
+ 725   2                      g_us_i2c_isr_error_code = EC_I2C_ISR_COMMUNICATION_FAIL;        //Indicates that I2C ISR communication is faile
+             -d
+ 726   2                      resetI2CCommunication();                //Reset I2C Communication
+ 727   2              }
+ 728   1      
+ 729   1              SI = 0;                             // Clear interrupt flag
+ 730   1      }
+ 731          
+ 732          #if (DEBUGGING_FEATURE == 1)
+ 733          #if (UART_LINE == 1)
+ 734          //------------------------------------------------------------------------------------
+ 735          // UART1 Interrupt
+ 736          //------------------------------------------------------------------------------------
+ 737          // Function's test result: fully functional
+ 738          //------------------------------------------------------------------------------------
+ 739          void ISRUART1 (void) interrupt 20
+ 740          {
+ 741   1              unsigned char l_uc_byte;
+ 742   1      
+ 743   1              if (RI1 && !(g_uc_combn_flag & USIP_FLAG_READY))                //If we receive something from UART1 and the input is r
+             -eceived when neither ready_to_process and ready_to_clear flag is set
+ 744   1              {
+ 745   2                      g_uc_combn_flag |= USIP_FLAG_START;     //Raise user input start flag, will not be cleared until it is manua
+             -lly cleared by the software
+ 746   2                      g_uc_combn_flag |= UART_FLAG_RX_BUSY;           //UART receive something, the software flag indicating that is se
+             -t, it will be reseted if the buffersize is full or the time out is reached
+ 747   2                      g_uc_uart_busy_timeout_counter = 0;     //UART Time out counter is reseted every time this RI1 is called (th
+             -at is, there is a data received)
+ 748   2      
+ 749   2                      if(g_us_uart_buffer_filled == 0)        //If there is no data in the buffer 
+ 750   2                              g_us_uart_input_first = 0;      //Point the first input to the array 0, implies that this is the first time 
+             -we input the data
+ 751   2      
+ 752   2                      RI1 = 0;                //Manually reset receive UART flag
+C51 COMPILER V9.02   LUXP_INTERRUPTS                                                       01/09/2014 12:21:18 PAGE 14  
+
+ 753   2                      l_uc_byte = SBUF1;      //Set Byte variable to whatever character received in UART1
+ 754   2      
+ 755   2                      if (g_us_uart_buffer_filled < UART_BUFFER_SIZE)         //If there is a space in the buffer
+ 756   2                      {
+ 757   3                              g_uc_uart_buffer[g_us_uart_input_first] = l_uc_byte;    //Insert the byte to the space
+ 758   3                              g_us_uart_buffer_filled++;                                              //Indicate increase in buffer size as a data has just been inputed
+ 759   3                              g_us_uart_input_first++;                                                //Increase pointer to the next coming data
+ 760   3                      }
+ 761   2                      else    //If the buffer is full, g_b_uart_rx_busy flag shall be reseted
+ 762   2                              g_uc_combn_flag &= ~UART_FLAG_RX_BUSY;
+ 763   2              }
+ 764   1              else RI1 = 0;
+ 765   1      
+ 766   1              if(TI1) TI1 = 0;
+ 767   1      
+ 768   1      }
+ 769          
+ 770          #elif (UART_LINE == 0)
+              //------------------------------------------------------------------------------------
+              // UART0 Interrupt
+              //------------------------------------------------------------------------------------
+              // Function's test result: fully functional
+              //------------------------------------------------------------------------------------
+              void ISRUART0 (void) interrupt 4
+              {
+                      unsigned char l_uc_byte;
+              
+                      if (RI0 && !(g_uc_combn_flag & USIP_FLAG_READY))                //If we receive something from UART0 and the input is r
+             -eceived when neither ready_to_process and ready_to_clear flag is set
+                      {
+                              g_uc_combn_flag |= USIP_FLAG_START;     //Raise user input start flag, will not be cleared until it is manua
+             -lly cleared by the software
+                              g_uc_combn_flag |= UART_FLAG_RX_BUSY;           //UART receive something, the software flag indicating that is se
+             -t, it will be reseted if the buffersize is full or the time out is reached
+                              g_uc_uart_busy_timeout_counter = 0;     //UART Time out counter is reseted every time this RI0 is called (th
+             -at is, there is a data received)
+              
+                              if(g_us_uart_buffer_filled == 0)        //If there is no data in the buffer 
+                                      g_us_uart_input_first = 0;      //Point the first input to the array 0, implies that this is the first time 
+             -we input the data
+              
+                              RI0 = 0;                //Manually reset receive UART flag
+                              l_uc_byte = SBUF0;      //Set Byte variable to whatever character received in UART0
+              
+                              if (g_us_uart_buffer_filled < UART_BUFFER_SIZE)         //If there is a space in the buffer
+                              {
+                                      g_uc_uart_buffer[g_us_uart_input_first] = l_uc_byte;    //Insert the byte to the space
+                                      g_us_uart_buffer_filled++;                                              //Indicate increase in buffer size as a data has just been inputed
+                                      g_us_uart_input_first++;                                                //Increase pointer to the next coming data
+                              }
+                              else    //If the buffer is full, UART_FLAG_RX_BUSY flag shall be reseted
+                                      g_uc_combn_flag &= ~UART_FLAG_RX_BUSY;
+                      }
+                      else RI0 = 0;
+              
+                      if(TI0) TI0 = 0;
+              
+              }
+              
+              #else
+              #endif
+ 809          #endif
+C51 COMPILER V9.02   LUXP_INTERRUPTS                                                       01/09/2014 12:21:18 PAGE 15  
+
+ 810          
+ 811          //------------------------------------------------------------------------------------
+ 812          // SPI Interrupt Routine
+ 813          //------------------------------------------------------------------------------------
+ 814          void ISRSPI (void) interrupt 6
+ 815          {
+ 816   1              if(g_uc_spit0ad0_flag & SPI_FLAG_TRANSMISSION_TIMEOUT)
+ 817   1                      SPIF = 0;
+ 818   1      
+ 819   1              if(WCOL | MODF)
+ 820   1              {
+ 821   2                      SPIEN = 0;
+ 822   2                      SPIEN = 1;
+ 823   2              }
+ 824   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2364    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      7    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

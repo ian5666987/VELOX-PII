@@ -1,0 +1,353 @@
+C51 COMPILER V9.02   LUXP_EXTRA                                                            01/09/2014 12:21:17 PAGE 1   
+
+
+C51 COMPILER V9.02, COMPILATION OF MODULE LUXP_EXTRA
+NO OBJECT MODULE REQUESTED
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE luxp_extra.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+*** WARNING C500 IN LINE 1 OF LUXP_EXTRA.C: LICENSE ERROR (R20D: CONTENT ERROR IN FLF FILE)
+
+   1          //------------------------------------------------------------------------------------
+   2          // Luxp_extra.c
+   3          //------------------------------------------------------------------------------------
+   4          // Copyright (C) 2013 Nanyang Technological University.
+   5          //
+   6          // AUTH: IAN
+   7          // DATE: 03 APR 2013
+   8          //
+   9          // The program Luxp_extra.c will be downloaded to the Pumpkin Motherboard with 
+  10          // C8051F120 uC as part of the VELOX-P Pico-Satellite Flight Software. 
+  11          //
+  12          //------------------------------------------------------------------------------------
+  13          
+  14          #include <luxp_extra.h>
+  15          
+  16          //------------------------------------------------------------------------------------
+  17          // Extra functions library
+  18          //------------------------------------------------------------------------------------
+  19          
+  20          #if (BEACON_HANDLER_ENABLE == 1)
+  21          #if (ISIS_CMD_ENABLE == 1)
+  22          #if (SENDING_ENABLE == 1)
+  23          //------------------------------------------------------------------------------------
+  24          // To recover from an extremely long data transmission
+  25          //------------------------------------------------------------------------------------
+  26          unsigned short overlyLongTransmissionRecovery (void)
+  27          {
+  28   1              unsigned short l_us_error_code[4] = EC_INIT;
+  29   1              unsigned char l_uc_i = 0;
+  30   1      
+  31   1              //Reset ITC board
+  32   1              l_us_error_code[0] = isisI2C(ITC_ADDR,ITC_I2C_RESET,0);
+  33   1      
+  34   1              //Wait for 3s (hopefully this is sufficient)
+  35   1              waitS(3);
+  36   1      
+  37   1              //If there is no error code
+  38   1              if (!l_us_error_code[0]){
+  39   2                      //Set beacon as it is supposed to.
+  40   2                      g_uc_ax25_message[l_uc_i++] = OBDH_SUBSYSTEM;
+  41   2                      g_uc_ax25_message[l_uc_i++] = SD_RCVRY_MSG;
+  42   2                      g_uc_ax25_message[l_uc_i++] = 0x02;
+  43   2                      g_uc_ax25_message[l_uc_i++] = 0x01;
+  44   2                      g_uc_ax25_message[l_uc_i++] = 0x08;
+  45   2                      g_uc_ax25_message[l_uc_i++] = 0x49;
+  46   2                      g_uc_ax25_message[l_uc_i++] = 0x5A;
+  47   2                      g_uc_ax25_message[l_uc_i++] = 0x59;
+  48   2      
+  49   2                      #if (CRC_ENABLE == 1)
+  50   2                      //Create CRC16 bytes for the message
+  51   2                      insertCRC16(g_uc_ax25_message,l_uc_i);
+  52   2                      #endif
+  53   2                      
+  54   2                      //Set AX.25 beacon
+C51 COMPILER V9.02   LUXP_EXTRA                                                            01/09/2014 12:21:17 PAGE 2   
+
+  55   2                      l_us_error_code[0] = isisI2CMsg(ITC_I2C_SET_AX_BCN_DFLT,30,l_uc_i+2,0);
+  56   2      
+  57   2                      //Wait for 500ms
+  58   2                      waitMs(200);
+  59   2                      waitMs(200);
+  60   2                      waitMs(100);
+  61   2                      
+  62   2                      //If there is no error code, continues with clearing the beacon and do
+  63   2                      //re-initialization of the beacon.
+  64   2                      if (!l_us_error_code[0]){
+  65   3                              //Initialize CW beacon rate to default
+  66   3                              l_us_error_code[0] = isisI2CPar(ITC_I2C_SET_CW_CHAR_RT,str_obdh_hk.us_cw_char_rate_par,0);
+  67   3                      
+  68   3                              //Clear beacon
+  69   3                              l_us_error_code[1] = isisI2C(ITC_ADDR,ITC_I2C_CLR_BCN,0);
+  70   3      
+  71   3                              //Set the beacon's TO callsigns
+  72   3                              l_us_error_code[2] = isisI2CMsg(ITC_I2C_SET_DFLT_AX_TO,0,0,0);
+  73   3                      
+  74   3                              //Set the beacon's FROM callsigns
+  75   3                              l_us_error_code[3] = isisI2CMsg(ITC_I2C_SET_DFLT_AX_FROM,0,0,0);                
+  76   3                      }
+  77   2              }
+  78   1      
+  79   1              return l_us_error_code[0];
+  80   1      }
+  81          #endif
+  82          #endif
+  83          #endif
+  84          
+  85          #if (EXTRA_ENABLE == 1)
+  86          #if (UPDATE_HANDLER_ENABLE == 1)
+  87          //-----------------------------------------------------------------------------
+  88          // convertA2D
+  89          //-----------------------------------------------------------------------------
+  90          //
+  91          // Return Value : None
+  92          // Parameters:
+  93          //   1) unsigned char l_uc_ad_ch - 
+  94          //
+  95          // This function convert the voltage at the selected A/D input
+  96          //
+  97          //-----------------------------------------------------------------------------
+  98          //There is no Convert_AD0() function in OBDH software, there is only one function
+  99          //convertA2D() in itand thus declared here.
+ 100          unsigned short convertA2D (unsigned char l_uc_ad_ch)
+ 101          {
+ 102   1              //Save the current SFR page
+ 103   1              char SFRPAGE_SAVE = SFRPAGE;
+ 104   1      
+ 105   1              unsigned short  l_us_ad_results;
+ 106   1      
+ 107   1              //Switch to ADC0
+ 108   1              SFRPAGE = ADC0_PAGE;
+ 109   1      
+ 110   1              //Select the ADC mux input
+ 111   1              AMX0SL = l_uc_ad_ch;
+ 112   1      
+ 113   1              //lsl : 03 May 2011 : 1719hrs
+ 114   1              //100us delay is required
+ 115   1              //While AD0INT is down, it has not finished converting.
+ 116   1              waitUs(100);
+C51 COMPILER V9.02   LUXP_EXTRA                                                            01/09/2014 12:21:17 PAGE 3   
+
+ 117   1      
+ 118   1              //Step 1: Clear AD0INT
+ 119   1              AD0INT = 0;
+ 120   1      
+ 121   1              //Step 2: Set AD0BUSY
+ 122   1              AD0BUSY = 1;
+ 123   1      
+ 124   1              //Set start flag for polling later
+ 125   1              g_uc_spit0ad0_flag |= AD0INT_FLAG_START;
+ 126   1      
+ 127   1              //Step 3: Poll ADOINT for 1
+ 128   1              while (!AD0INT && !(g_uc_spit0ad0_flag & AD0INT_FLAG_TIMEOUT))
+ 129   1      
+ 130   1              //Reset start and timeout flag
+ 131   1              g_uc_spit0ad0_flag &= ~AD0INT_FLAG_START;
+ 132   1              g_uc_spit0ad0_flag &= ~AD0INT_FLAG_TIMEOUT;
+ 133   1      
+ 134   1              //Store conversion results
+ 135   1              l_us_ad_results = ADC0;
+ 136   1      
+ 137   1              //Clear ADC conversion complete indicator
+ 138   1              AD0INT = 0;
+ 139   1      
+ 140   1              //Restore the SFRPAGE
+ 141   1              SFRPAGE = SFRPAGE_SAVE;
+ 142   1      
+ 143   1              return (l_us_ad_results);
+ 144   1      }
+ 145          #endif
+ 146          
+ 147          //------------------------------------------------------------------------------------
+ 148          // To ensure satellite reset to occur
+ 149          //------------------------------------------------------------------------------------
+ 150          void resetSatellite (void)
+ 151          {
+ 152   1              unsigned short l_us_error_code = EC_INIT;
+ 153   1              unsigned long l_ul_scheduled_time;
+ 154   1      
+ 155   1              //Set the flag to indicate that the satellite reset is initialized
+ 156   1              g_uc_evha_flag |= EVENT_FLAG_RESET_SAT_INITIALIZED;
+ 157   1      
+ 158   1              #if (STORING_ENABLE == 1)
+ 159   1              //Save satellite's last state
+ 160   1              saveState();
+ 161   1              #endif
+ 162   1      
+ 163   1              #if (SATELLITE_SCHEDULE_HANDLER_ENABLE == 1)
+ 164   1              //Remove the bottom three schedules (if any, ensuring that there are at least three spaces in the schedul
+             -er to reset the satellite)
+ 165   1              removeSchedule(SCHEDULER_BLOCK_SIZE-2,SCHEDULER_BLOCK_SIZE);
+ 166   1      
+ 167   1              //Record scheduled OBC time value to reset before being used
+ 168   1              l_ul_scheduled_time = str_obdh_data.ul_obc_time_s+2;
+ 169   1      
+ 170   1              //Schedule PWRS to turn OFF all subsystems at once
+ 171   1              scheduleOffAllSubsystems(l_ul_scheduled_time);
+ 172   1      
+ 173   1              //Schedule to reset PWRS 1 second after all other subsystems are turned OFF
+ 174   1              scheduleResetPWRSOBDH(l_ul_scheduled_time+1, PWRS_ADDR);
+ 175   1      
+ 176   1              //Schedule to reset OBDH 2 seconds after PWRS subsystem is reset
+ 177   1              scheduleResetPWRSOBDH(l_ul_scheduled_time+3, OBDH_ADDR);
+C51 COMPILER V9.02   LUXP_EXTRA                                                            01/09/2014 12:21:17 PAGE 4   
+
+ 178   1              #endif
+ 179   1      }
+ 180          
+ 181          #if (UPDATE_HANDLER_ENABLE == 1)
+ 182          //------------------------------------------------------------------------------------
+ 183          // To read MCU temperature in float and converts it to short and update it to the
+ 184          // pre-defined global variable.
+ 185          //------------------------------------------------------------------------------------
+ 186          void readMCUTemperature (void)
+ 187          {
+ 188   1              unsigned short  l_us_adc_bits;
+ 189   1              long                    l_l_adc_mv;
+ 190   1              float                   l_f_mcu_temperature;
+ 191   1      
+ 192   1              l_us_adc_bits                   = convertA2D(8);
+ 193   1              l_l_adc_mv                              = (((long)l_us_adc_bits * 2430) >> 12);
+ 194   1              l_f_mcu_temperature     = ((l_l_adc_mv - 776)/2.86);
+ 195   1              str_obdh_hk.s_mcu_temp  = (short)(l_f_mcu_temperature*100);
+ 196   1      }
+ 197          #endif
+ 198          
+ 199          #if (BODY_RATE_HANDLER_ENABLE == 1)
+ 200          #if (ADCS_CMD_ENABLE == 1)
+ 201          #if (PWRS_CMD_ENABLE == 1)
+ 202          //------------------------------------------------------------------------------------
+ 203          // To update body rate variable values
+ 204          //------------------------------------------------------------------------------------
+ 205          // Ian (2012-05-15): It is noted that there is a preferable way with less memory and
+ 206          //                                       and computational time to calculate average value, that is by
+ 207          //                                       weighting the previous averaga value and the recent measurements
+ 208          void updateBodyRateAverage (void)
+ 209          {
+ 210   1              static unsigned char l_uc_sample_point_index = 0;
+ 211   1              unsigned char l_uc_i = 0;
+ 212   1              short l_s_br_register[3] = {0,0,0};
+ 213   1              unsigned long l_ul_accumulator[3] = {0,0,0};
+ 214   1      
+ 215   1              //Get the latest body rate value
+ 216   1              g_s_br_eci[0][l_uc_sample_point_index] = str_adcs_hk.s_br_eci[0];
+ 217   1              g_s_br_eci[1][l_uc_sample_point_index] = str_adcs_hk.s_br_eci[1];
+ 218   1              g_s_br_eci[2][l_uc_sample_point_index] = str_adcs_hk.s_br_eci[2];
+ 219   1      
+ 220   1              //Calculate the average of the ten samples
+ 221   1              for (l_uc_i = 0; l_uc_i < BR_ECI_SAMPLE_NO; l_uc_i++){
+ 222   2                      //Ian (2012-05-15): This step is meant to take absolute values of the measurements before they are accum
+             -ulated
+ 223   2                      //Take the absolute value of the samples
+ 224   2                      l_s_br_register[0] = (g_s_br_eci[0][l_uc_i] >= 0) ? g_s_br_eci[0][l_uc_i] : (0-g_s_br_eci[0][l_uc_i]);
+ 225   2                      l_s_br_register[1] = (g_s_br_eci[1][l_uc_i] >= 0) ? g_s_br_eci[1][l_uc_i] : (0-g_s_br_eci[1][l_uc_i]);
+ 226   2                      l_s_br_register[2] = (g_s_br_eci[2][l_uc_i] >= 0) ? g_s_br_eci[2][l_uc_i] : (0-g_s_br_eci[2][l_uc_i]);
+ 227   2      
+ 228   2                      //Accumulate the absolute values
+ 229   2                      l_ul_accumulator[0] += l_s_br_register[0];
+ 230   2                      l_ul_accumulator[1] += l_s_br_register[1];
+ 231   2                      l_ul_accumulator[2] += l_s_br_register[2];
+ 232   2              }
+ 233   1      
+ 234   1              //Ian (2012-05-15): Since the values are always non-negative. It is noted that the data type is changed t
+             -o be unsigned short.
+ 235   1              //                                      It was first declared as short to strictly follow ADCS data type declaration for this data.
+ 236   1              //Get the average
+ 237   1              str_obdh_data.us_br_eci_avg[0] = l_ul_accumulator[0]/BR_ECI_SAMPLE_NO;
+C51 COMPILER V9.02   LUXP_EXTRA                                                            01/09/2014 12:21:17 PAGE 5   
+
+ 238   1              str_obdh_data.us_br_eci_avg[1] = l_ul_accumulator[1]/BR_ECI_SAMPLE_NO;
+ 239   1              str_obdh_data.us_br_eci_avg[2] = l_ul_accumulator[2]/BR_ECI_SAMPLE_NO;
+ 240   1      
+ 241   1              //If the sample point index is less than BR_ECI_SAMPLE_NO-1, increase it
+ 242   1              if (l_uc_sample_point_index < (BR_ECI_SAMPLE_NO-1))
+ 243   1                      l_uc_sample_point_index++;
+ 244   1              //Else, reset it to zero
+ 245   1              else l_uc_sample_point_index = 0;
+ 246   1      
+ 247   1              //Update BRH_FLAG_BR_HI
+ 248   1              //Ian (2012-05-15): Euclidean norm is not used for this case since high body rate measurement 
+ 249   1              //                                      over a period of time for one axis of the satellite's ECI frame is the criteria to say
+ 250   1              //                                      that satellite is rotating too fast. Thus, max norm is used.
+ 251   1              if ((str_obdh_data.us_br_eci_avg[0] >= str_obdh_par.us_br_threshold_high[0]) || (str_obdh_data.us_br_eci_
+             -avg[1] >= str_obdh_par.us_br_threshold_high[1]) || (str_obdh_data.us_br_eci_avg[2] >= str_obdh_par.us_br_threshold_high[
+             -2]))
+ 252   1                      str_obdh_hk.us_brh_flag |= BRH_FLAG_BR_HI;
+ 253   1              else str_obdh_hk.us_brh_flag &= ~BRH_FLAG_BR_HI;
+ 254   1      
+ 255   1              //Update BRH_FLAG_BR_LOW
+ 256   1              //Ian (2012-05-15): If neither BRH_FLAG_BR_HI nor BRH_FLAG_BR_LOW are set, it means the satellite
+ 257   1              //                                  is neither rotating too fast not too slow. An example for this case is when the satellite
+ 258   1              //                                      has reached low body rate and thus the control mechanism is cut to save power. And so, the
+ 259   1              //                                      BRH_FLAG_BR_LOW flag is set. And afterwards the body rate gets higher, but not high 
+ 260   1              //                                      enough to make the control mechanism activated. Yet, BRH_FLAG_BR_LOW flag is reset.
+ 261   1              //                                      But when the body rate gets high more than the threshold, the BRH_FLAG_BR_HI is set and
+ 262   1              //                                      control mechanism is triggered to be activated again, making body rate lower and therefore
+ 263   1              //                                      BRH_FLAG_BR_HI is reset. But this will not cut the control mechanism unless body rate is
+ 264   1              //                                      found to be sufficiently low and thus BRH_FLAG_BR_LOW is raised. By this, it prevents
+ 265   1              //                                      oscillatory behavior of the control mechanism.
+ 266   1              if ((str_obdh_data.us_br_eci_avg[0] <= str_obdh_par.us_br_threshold_low[0]) && (str_obdh_data.us_br_eci_a
+             -vg[1] <= str_obdh_par.us_br_threshold_low[1]) && (str_obdh_data.us_br_eci_avg[2] <= str_obdh_par.us_br_threshold_low[2])
+             -)
+ 267   1                      str_obdh_hk.us_brh_flag |= BRH_FLAG_BR_LOW;
+ 268   1              else str_obdh_hk.us_brh_flag &= ~BRH_FLAG_BR_LOW;
+ 269   1      }
+ 270          #endif
+ 271          #endif
+ 272          #endif
+ 273          
+ 274          //----------------------------------------------------------
+ 275          // This function is to do SW reset on OBDH 
+ 276          //----------------------------------------------------------
+ 277          //Ian (2012-05-15): It is noted that swReset and hwReset shares the same sequence of code but different co
+             -nstants.
+ 278          void swReset (void)
+ 279          {
+ 280   1              #if (STORING_ENABLE == 1)
+ 281   1              //Save satellite's last state
+ 282   1              saveState();
+ 283   1              #endif
+ 284   1      
+ 285   1              SFRPAGE = LEGACY_PAGE;
+ 286   1              RSTSRC |= 0x10;
+ 287   1      }
+ 288          
+ 289          //----------------------------------------------------------
+ 290          // This function is to do HW reset on OBDH
+ 291          //----------------------------------------------------------
+ 292          void hwReset (void)
+ 293          {
+ 294   1              #if (STORING_ENABLE == 1)
+C51 COMPILER V9.02   LUXP_EXTRA                                                            01/09/2014 12:21:17 PAGE 6   
+
+ 295   1              //Save satellite's last state
+ 296   1              saveState();
+ 297   1              #endif
+ 298   1      
+ 299   1              SFRPAGE = LEGACY_PAGE;
+ 300   1              RSTSRC |= 0x01;
+ 301   1      }
+ 302          #endif
+ 303          
+ 304          ////----------------------------------------------------------
+ 305          //// This function is to toggle antenna uC address
+ 306          ////----------------------------------------------------------
+ 307          //void switchAntennaAddress (void)
+ 308          //{
+ 309          //      g_uc_antenna_addr = (g_uc_antenna_addr == ANTENNA_1_ADDR) ? ANTENNA_2_ADDR : ANTENNA_1_ADDR;
+ 310          //}
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1153    ----
+   CONSTANT SIZE    =     26    ----
+   XDATA SIZE       =      1      39
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

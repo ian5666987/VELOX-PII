@@ -1,0 +1,672 @@
+C51 COMPILER V9.02   LUXP_PWRS                                                             01/09/2014 12:21:20 PAGE 1   
+
+
+C51 COMPILER V9.02, COMPILATION OF MODULE LUXP_PWRS
+NO OBJECT MODULE REQUESTED
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE luxp_PWRS.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+*** WARNING C500 IN LINE 1 OF LUXP_PWRS.C: LICENSE ERROR (R20D: CONTENT ERROR IN FLF FILE)
+
+   1          //------------------------------------------------------------------------------------
+   2          // Luxp_PWRS.c
+   3          //------------------------------------------------------------------------------------
+   4          // Copyright (C) 2013 Nanyang Technological University.
+   5          //
+   6          // AUTH: IAN
+   7          // DATE: 03 APR 2013
+   8          //
+   9          // The program Luxp_PWRS.c will be downloaded to the Pumpkin Motherboard with 
+  10          // C8051F120 uC as part of the VELOX-P Pico-Satellite Flight Software. 
+  11          //
+  12          // This file contains all functions related to communication with PWRS subsystem
+  13          //
+  14          //------------------------------------------------------------------------------------
+  15          // Overall functional test status
+  16          //------------------------------------------------------------------------------------
+  17          // Completely untested
+  18          //
+  19          //------------------------------------------------------------------------------------
+  20          // Overall documentation status
+  21          //------------------------------------------------------------------------------------
+  22          // Minimally documented
+  23          //------------------------------------------------------------------------------------
+  24          
+  25          //------------------------------------------------------------------------------------
+  26          // List of functions                            | Test status                                   | Documentation
+  27          //------------------------------------------------------------------------------------
+  28          // NA                                                           | NA                                                    | NA
+  29          //------------------------------------------------------------------------------------
+  30          
+  31          #include <luxp_PWRS.h>
+  32          
+  33          #if (PWRS_CMD_ENABLE == 1)
+  34          //------------------------------------------------------------------------------------
+  35          // PWRS I2C function (without input parameter)
+  36          //------------------------------------------------------------------------------------
+  37          // Function's test result: untested
+  38          //------------------------------------------------------------------------------------
+  39          unsigned short pwrsI2C (unsigned char l_uc_msg_out, unsigned char l_uc_func_par)
+  40          {
+  41   1              unsigned short l_us_error_code = EC_INIT;       
+  42   1      
+  43   1              #if (DEBUGGING_FEATURE == 1)
+  44   1              //To initialize time recording (if assigned)
+  45   1              if(l_uc_func_par & 0x01) startTiming();
+  46   1              #endif
+  47   1      
+  48   1              //To initialize and assign transmission parameters      
+  49   1              g_uc_i2c_msg_out                                = l_uc_msg_out;
+  50   1              g_uc_i2c_target                                 = PWRS_ADDR;
+  51   1              g_uc_i2c_transferred_byte_out   = 1;
+  52   1              g_uc_i2c_data_out[0]                    = g_uc_i2c_msg_out;
+  53   1      
+  54   1              switch (g_uc_i2c_msg_out){
+C51 COMPILER V9.02   LUXP_PWRS                                                             01/09/2014 12:21:20 PAGE 2   
+
+  55   2                      case PWRS_I2C_GET_HK:
+  56   2                              g_uc_i2c_transferred_byte_in = PWRS_I2C_GET_HK_RD;
+  57   2                              l_uc_func_par |= 0x0E;  //write, read, and store
+  58   2                              break;
+  59   2      
+  60   2                      case PWRS_I2C_GET_SSCP:
+  61   2                              g_uc_i2c_transferred_byte_in = PWRS_I2C_GET_SSCP_RD;
+  62   2                              l_uc_func_par |= 0x0E;  //write, read, and store
+  63   2                              break;
+  64   2      
+  65   2                      default:
+  66   2                              break;
+  67   2              }
+  68   1      
+  69   1              //If there is data out bit, transmit I2C command
+  70   1              if (l_uc_func_par & 0x04) 
+  71   1                      l_us_error_code = i2cWrite();
+  72   1      
+  73   1              //If there is data in bit, retrieve I2C data
+  74   1              if (l_uc_func_par & 0x02){
+  75   2                      if (l_us_error_code == EC_SUCCESSFUL)
+  76   2                              l_us_error_code = i2cWaitRead(TIME_DELAY_PWRS_I2C_CMD_WAITING_TENTH_MS,TIME_DELAY_PWRS_I2C_CMD_DELAY_TE
+             -NTH_MS);
+  77   2              }
+  78   1      
+  79   1              //If there is store bit, store the I2C data.
+  80   1              if (!l_us_error_code && (l_uc_func_par & 0x08)){
+  81   2                      g_us_data_counter = 0;
+  82   2                      storePWRS(g_uc_i2c_data_in);
+  83   2              }
+  84   1      
+  85   1              #if (DEBUGGING_FEATURE == 1)
+  86   1              //To end time recording
+  87   1              if (l_uc_func_par & 0x01) endTiming();
+  88   1              #endif
+  89   1      
+  90   1              return l_us_error_code; 
+  91   1      }
+  92          
+  93          //------------------------------------------------------------------------------------
+  94          // Get single PWRS data
+  95          //------------------------------------------------------------------------------------
+  96          // Function's test result: untested
+  97          //------------------------------------------------------------------------------------
+  98          #if (DEBUGGING_FEATURE == 1)
+  99          unsigned short pwrsGetData (unsigned char l_uc_data_id, unsigned char l_uc_record_time_par)
+ 100          #else
+              unsigned short pwrsGetData (unsigned char l_uc_data_id)
+              #endif
+ 103          {
+ 104   1              unsigned short l_us_error_code = EC_INIT;       
+ 105   1              unsigned short l_us_data_id;
+ 106   1      
+ 107   1              #if (DEBUGGING_FEATURE == 1)
+ 108   1              //To initialize time recording (if assigned)
+ 109   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 110   1              #endif
+ 111   1      
+ 112   1              //To initialize transmission parameters 
+ 113   1              g_uc_i2c_target = PWRS_ADDR;
+ 114   1              g_uc_i2c_msg_out = PWRS_I2C_GET_DATA;
+ 115   1              g_uc_i2c_transferred_byte_out = PWRS_I2C_GET_DATA_WR;
+C51 COMPILER V9.02   LUXP_PWRS                                                             01/09/2014 12:21:20 PAGE 3   
+
+ 116   1              g_uc_i2c_transferred_byte_in = PWRS_I2C_GET_DATA_RD;
+ 117   1      
+ 118   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 119   1              g_uc_i2c_data_out[1] = l_uc_data_id;
+ 120   1      
+ 121   1              l_us_data_id = (unsigned short)(g_uc_i2c_target << 8) + l_uc_data_id;
+ 122   1              
+ 123   1              //To transmit I2C command
+ 124   1              l_us_error_code = i2cWrite();
+ 125   1              
+ 126   1              //To receive I2C data
+ 127   1              if (l_us_error_code == EC_SUCCESSFUL)
+ 128   1                      l_us_error_code = i2cWaitRead(TIME_DELAY_PWRS_I2C_CMD_WAITING_TENTH_MS,TIME_DELAY_PWRS_I2C_CMD_DELAY_TEN
+             -TH_MS);
+ 129   1      
+ 130   1              //For special data, OBC would like to save
+ 131   1              if (!l_us_error_code) 
+ 132   1                      switch (l_us_data_id){
+ 133   2                              case DATA_PWRS_UC_CHANNEL_STATUS:
+ 134   2                              case DATA_PWRS_US_PV_FV_1:
+ 135   2                              case DATA_PWRS_US_PV_FV_2:
+ 136   2                              case DATA_PWRS_US_PV_FV_3:
+ 137   2                                      g_us_data_counter = 0;
+ 138   2                                      storePWRS(g_uc_i2c_data_in);
+ 139   2                                      break;
+ 140   2      
+ 141   2                              default:
+ 142   2                                      break;
+ 143   2                      }
+ 144   1      
+ 145   1              #if (DEBUGGING_FEATURE == 1)
+ 146   1              //To end time recording
+ 147   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 148   1              #endif
+ 149   1      
+ 150   1              return l_us_error_code; 
+ 151   1      }
+ 152          
+ 153          //------------------------------------------------------------------------------------
+ 154          // To update battery heater parameter
+ 155          //------------------------------------------------------------------------------------
+ 156          // Function's test result: untested
+ 157          //------------------------------------------------------------------------------------
+ 158          #if (DEBUGGING_FEATURE == 1)
+ 159          unsigned short pwrsUpdateBatteryHeater (unsigned char l_uc_pwrs_battery_heater, unsigned char l_uc_record_
+             -time_par)
+ 160          #else
+              unsigned short pwrsUpdateBatteryHeater (unsigned char l_uc_pwrs_battery_heater)
+              #endif
+ 163          {
+ 164   1              unsigned short l_us_error_code = EC_INIT;       
+ 165   1      
+ 166   1              #if (DEBUGGING_FEATURE == 1)
+ 167   1              //To initialize time recording (if assigned)
+ 168   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 169   1              #endif
+ 170   1      
+ 171   1              //To initialize transmission parameters 
+ 172   1              g_uc_i2c_target = PWRS_ADDR;
+ 173   1              g_uc_i2c_msg_out = PWRS_I2C_SET_HT;
+ 174   1              g_uc_i2c_transferred_byte_out = PWRS_I2C_SET_HT_WR;
+ 175   1      
+C51 COMPILER V9.02   LUXP_PWRS                                                             01/09/2014 12:21:20 PAGE 4   
+
+ 176   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 177   1              g_uc_i2c_data_out[1] = l_uc_pwrs_battery_heater;
+ 178   1              
+ 179   1              //To transmit I2C command
+ 180   1              l_us_error_code = i2cWrite();
+ 181   1              
+ 182   1              #if (DEBUGGING_FEATURE == 1)
+ 183   1              //To end time recording
+ 184   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 185   1              #endif
+ 186   1      
+ 187   1              return l_us_error_code; 
+ 188   1      }
+ 189          
+ 190          //------------------------------------------------------------------------------------
+ 191          // To set multiple outputs to ON/OFF
+ 192          // PWRS channel enable byte is the new PWRS reference
+ 193          //------------------------------------------------------------------------------------
+ 194          // Function's test result: untested
+ 195          //------------------------------------------------------------------------------------
+ 196          #if (DEBUGGING_FEATURE == 1)
+ 197          unsigned short pwrsSetOutput (unsigned char l_uc_pwrs_channel_enable, unsigned char l_uc_record_time_par)
+ 198          #else
+              unsigned short pwrsSetOutput (unsigned char l_uc_pwrs_channel_enable)
+              #endif
+ 201          {
+ 202   1              unsigned short l_us_error_code = EC_INIT;       
+ 203   1      
+ 204   1              #if (DEBUGGING_FEATURE == 1)
+ 205   1              //To initialize time recording (if assigned)
+ 206   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 207   1              #endif
+ 208   1      
+ 209   1              //To initialize transmission parameters 
+ 210   1              g_uc_i2c_target = PWRS_ADDR;
+ 211   1              g_uc_i2c_msg_out = PWRS_I2C_SET_OUTPUT;
+ 212   1              g_uc_i2c_transferred_byte_out = PWRS_I2C_SET_OUTPUT_WR;
+ 213   1      
+ 214   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 215   1              g_uc_i2c_data_out[1] = l_uc_pwrs_channel_enable;
+ 216   1              
+ 217   1              //To transmit I2C command
+ 218   1              l_us_error_code = i2cWrite();
+ 219   1              
+ 220   1              #if (DEBUGGING_FEATURE == 1)
+ 221   1              //To end time recording
+ 222   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 223   1              #endif
+ 224   1      
+ 225   1              return l_us_error_code; 
+ 226   1      }
+ 227          
+ 228          //------------------------------------------------------------------------------------
+ 229          // To set single channel ON/OFF with a delay time
+ 230          //------------------------------------------------------------------------------------
+ 231          // Bit0: ADS
+ 232          // Bit1: ACS
+ 233          // Bit2: PAYL
+ 234          // Bit3: Mechanical Deployment (thermal knife)
+ 235          // Bit4: COMM
+ 236          // Bit5: PAYL 3V3 channel
+ 237          //------------------------------------------------------------------------------------
+C51 COMPILER V9.02   LUXP_PWRS                                                             01/09/2014 12:21:20 PAGE 5   
+
+ 238          // Function's test result: untested
+ 239          //------------------------------------------------------------------------------------
+ 240          #if (DEBUGGING_FEATURE == 1)
+ 241          unsigned short pwrsSetSingleOutput (unsigned char l_uc_pwrs_var_channel, unsigned char l_uc_value, unsigne
+             -d short l_us_delay, unsigned char l_uc_record_time_par)
+ 242          #else
+              unsigned short pwrsSetSingleOutput (unsigned char l_uc_pwrs_var_channel, unsigned char l_uc_value, unsigne
+             -d short l_us_delay)
+              #endif
+ 245          {
+ 246   1              unsigned short l_us_error_code = EC_INIT;       
+ 247   1      
+ 248   1              #if (DEBUGGING_FEATURE == 1)
+ 249   1              //To initialize time recording (if assigned)
+ 250   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 251   1              #endif
+ 252   1      
+ 253   1              //To initialize transmission parameters 
+ 254   1              g_uc_i2c_target = PWRS_ADDR;
+ 255   1              g_uc_i2c_msg_out = PWRS_I2C_SET_SINGLE_OUTPUT;
+ 256   1              g_uc_i2c_transferred_byte_out = PWRS_I2C_SET_SINGLE_OUTPUT_WR;
+ 257   1      
+ 258   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 259   1              g_uc_i2c_data_out[1] = l_uc_pwrs_var_channel;
+ 260   1              g_uc_i2c_data_out[2] = l_uc_value;
+ 261   1              g_uc_i2c_data_out[3] = l_us_delay >> 8;
+ 262   1              g_uc_i2c_data_out[4] = l_us_delay;
+ 263   1              
+ 264   1              //To transmit I2C command
+ 265   1              l_us_error_code = i2cWrite();
+ 266   1              
+ 267   1              #if (DEBUGGING_FEATURE == 1)
+ 268   1              //To end time recording
+ 269   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 270   1              #endif
+ 271   1      
+ 272   1              return l_us_error_code; 
+ 273   1      }
+ 274          
+ 275          //------------------------------------------------------------------------------------
+ 276          // To set PWRS MPPT mode
+ 277          //------------------------------------------------------------------------------------
+ 278          // Function's test result: untested
+ 279          //------------------------------------------------------------------------------------
+ 280          #if (DEBUGGING_FEATURE == 1)
+ 281          unsigned short pwrsSetMPPTMode (unsigned char l_uc_pwrs_mppt_mode, unsigned char l_uc_record_time_par)
+ 282          #else
+              unsigned short pwrsSetMPPTMode (unsigned char l_uc_pwrs_mppt_mode)
+              #endif
+ 285          {
+ 286   1              unsigned short l_us_error_code = EC_INIT;       
+ 287   1      
+ 288   1              #if (DEBUGGING_FEATURE == 1)
+ 289   1              //To initialize time recording (if assigned)
+ 290   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 291   1              #endif
+ 292   1      
+ 293   1              //To initialize transmission parameters 
+ 294   1              g_uc_i2c_target = PWRS_ADDR;
+ 295   1              g_uc_i2c_msg_out = PWRS_I2C_SET_MPPT_MODE;
+ 296   1              g_uc_i2c_transferred_byte_out = PWRS_I2C_SET_MPPT_MODE_WR;
+ 297   1      
+C51 COMPILER V9.02   LUXP_PWRS                                                             01/09/2014 12:21:20 PAGE 6   
+
+ 298   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 299   1              g_uc_i2c_data_out[1] = l_uc_pwrs_mppt_mode;
+ 300   1              
+ 301   1              //To transmit I2C command
+ 302   1              l_us_error_code = i2cWrite();
+ 303   1              
+ 304   1              #if (DEBUGGING_FEATURE == 1)
+ 305   1              //To end time recording
+ 306   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 307   1              #endif
+ 308   1      
+ 309   1              return l_us_error_code; 
+ 310   1      }
+ 311          
+ 312          //------------------------------------------------------------------------------------
+ 313          // To set PWRS PV Volt
+ 314          //------------------------------------------------------------------------------------
+ 315          // Function's test result: untested
+ 316          //------------------------------------------------------------------------------------
+ 317          #if (DEBUGGING_FEATURE == 1)
+ 318          unsigned short pwrsSetPVVolt (unsigned char l_uc_record_time_par)
+ 319          #else
+              unsigned short pwrsSetPVVolt (void)
+              #endif
+ 322          {
+ 323   1              unsigned short l_us_error_code = EC_INIT;       
+ 324   1      
+ 325   1              #if (DEBUGGING_FEATURE == 1)
+ 326   1              //To initialize time recording (if assigned)
+ 327   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 328   1              #endif
+ 329   1      
+ 330   1              //To initialize transmission parameters 
+ 331   1              g_uc_i2c_target = PWRS_ADDR;
+ 332   1              g_uc_i2c_msg_out = PWRS_I2C_SET_PV_VOLT;
+ 333   1              g_uc_i2c_transferred_byte_out = PWRS_I2C_SET_PV_VOLT_WR;
+ 334   1      
+ 335   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 336   1              g_uc_i2c_data_out[1] = str_pwrs_data.us_pv_fv[0] >> 8;
+ 337   1              g_uc_i2c_data_out[2] = str_pwrs_data.us_pv_fv[0];
+ 338   1              g_uc_i2c_data_out[3] = str_pwrs_data.us_pv_fv[1] >> 8;
+ 339   1              g_uc_i2c_data_out[4] = str_pwrs_data.us_pv_fv[1];
+ 340   1              g_uc_i2c_data_out[5] = str_pwrs_data.us_pv_fv[2] >> 8;
+ 341   1              g_uc_i2c_data_out[6] = str_pwrs_data.us_pv_fv[2];
+ 342   1              
+ 343   1              //To transmit I2C command
+ 344   1              l_us_error_code = i2cWrite();
+ 345   1              
+ 346   1              #if (DEBUGGING_FEATURE == 1)
+ 347   1              //To end time recording
+ 348   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 349   1              #endif
+ 350   1      
+ 351   1              return l_us_error_code; 
+ 352   1      }
+ 353          
+ 354          //------------------------------------------------------------------------------------
+ 355          // To set PWRS thermal knife output
+ 356          //------------------------------------------------------------------------------------
+ 357          // Function's test result: untested
+ 358          //------------------------------------------------------------------------------------
+ 359          #if (DEBUGGING_FEATURE == 1)
+C51 COMPILER V9.02   LUXP_PWRS                                                             01/09/2014 12:21:20 PAGE 7   
+
+ 360          unsigned short pwrsSetTKOutput (unsigned char l_uc_pwrs_var_channel, unsigned char l_uc_value, unsigned sh
+             -ort l_us_delay, unsigned char l_uc_record_time_par)
+ 361          #else
+              unsigned short pwrsSetTKOutput (unsigned char l_uc_pwrs_var_channel, unsigned char l_uc_value, unsigned sh
+             -ort l_us_delay)
+              #endif
+ 364          {
+ 365   1              unsigned short l_us_error_code = EC_INIT;       
+ 366   1      
+ 367   1              #if (DEBUGGING_FEATURE == 1)
+ 368   1              //To initialize time recording (if assigned)
+ 369   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 370   1              #endif
+ 371   1      
+ 372   1              //To initialize transmission parameters 
+ 373   1              g_uc_i2c_target = PWRS_ADDR;
+ 374   1              g_uc_i2c_msg_out = PWRS_I2C_SET_TK_OUTPUT;
+ 375   1              g_uc_i2c_transferred_byte_out = PWRS_I2C_SET_TK_OUTPUT_WR;
+ 376   1      
+ 377   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 378   1              g_uc_i2c_data_out[1] = l_uc_pwrs_var_channel;
+ 379   1              g_uc_i2c_data_out[2] = l_uc_value;
+ 380   1              g_uc_i2c_data_out[3] = l_us_delay >> 8;
+ 381   1              g_uc_i2c_data_out[4] = l_us_delay;
+ 382   1              
+ 383   1              //To transmit I2C command
+ 384   1              l_us_error_code = i2cWrite();
+ 385   1              
+ 386   1              #if (DEBUGGING_FEATURE == 1)
+ 387   1              //To end time recording
+ 388   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 389   1              #endif
+ 390   1      
+ 391   1              return l_us_error_code; 
+ 392   1      }
+ 393          
+ 394          //------------------------------------------------------------------------------------
+ 395          // To reset PWRS subsystem
+ 396          //------------------------------------------------------------------------------------
+ 397          // Function's test result: untested
+ 398          //------------------------------------------------------------------------------------
+ 399          #if (DEBUGGING_FEATURE == 1)
+ 400          unsigned short pwrsResetPWRS (unsigned short l_us_delay, unsigned char l_uc_record_time_par)
+ 401          #else
+              unsigned short pwrsResetPWRS (unsigned short l_us_delay)
+              #endif
+ 404          {
+ 405   1              unsigned short l_us_error_code = EC_INIT;       
+ 406   1      
+ 407   1              #if (DEBUGGING_FEATURE == 1)
+ 408   1              //To initialize time recording (if assigned)
+ 409   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 410   1              #endif
+ 411   1      
+ 412   1              //To initialize transmission parameters 
+ 413   1              g_uc_i2c_target = PWRS_ADDR;
+ 414   1              g_uc_i2c_msg_out = PWRS_I2C_RESET_PWRS;
+ 415   1              g_uc_i2c_transferred_byte_out = PWRS_I2C_RESET_PWRS_WR;
+ 416   1      
+ 417   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 418   1              g_uc_i2c_data_out[1] = l_us_delay >> 8;
+ 419   1              g_uc_i2c_data_out[2] = l_us_delay;
+C51 COMPILER V9.02   LUXP_PWRS                                                             01/09/2014 12:21:20 PAGE 8   
+
+ 420   1              
+ 421   1              //To transmit I2C command
+ 422   1              l_us_error_code = i2cWrite();
+ 423   1              
+ 424   1              #if (DEBUGGING_FEATURE == 1)
+ 425   1              //To end time recording
+ 426   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 427   1              #endif
+ 428   1      
+ 429   1              return l_us_error_code; 
+ 430   1      }
+ 431          
+ 432          //------------------------------------------------------------------------------------
+ 433          // To reset OBDH subsystem
+ 434          //------------------------------------------------------------------------------------
+ 435          // Function's test result: untested
+ 436          //------------------------------------------------------------------------------------
+ 437          #if (DEBUGGING_FEATURE == 1)
+ 438          unsigned short pwrsResetOBDH (unsigned short l_us_delay, unsigned char l_uc_record_time_par)
+ 439          #else
+              unsigned short pwrsResetOBDH (unsigned short l_us_delay)
+              #endif
+ 442          {
+ 443   1              unsigned short l_us_error_code = EC_INIT;       
+ 444   1      
+ 445   1              #if (DEBUGGING_FEATURE == 1)
+ 446   1              //To initialize time recording (if assigned)
+ 447   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 448   1              #endif
+ 449   1      
+ 450   1              //To initialize transmission parameters 
+ 451   1              g_uc_i2c_target = PWRS_ADDR;
+ 452   1              g_uc_i2c_msg_out = PWRS_I2C_RESET_OBDH;
+ 453   1              g_uc_i2c_transferred_byte_out = PWRS_I2C_RESET_OBDH_WR;
+ 454   1      
+ 455   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 456   1              g_uc_i2c_data_out[1] = l_us_delay >> 8;
+ 457   1              g_uc_i2c_data_out[2] = l_us_delay;
+ 458   1              
+ 459   1              //To transmit I2C command
+ 460   1              l_us_error_code = i2cWrite();
+ 461   1              
+ 462   1              #if (DEBUGGING_FEATURE == 1)
+ 463   1              //To end time recording
+ 464   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 465   1              #endif
+ 466   1      
+ 467   1              return l_us_error_code; 
+ 468   1      }
+ 469          
+ 470          //------------------------------------------------------------------------------------
+ 471          // To set SOC limit
+ 472          //------------------------------------------------------------------------------------
+ 473          // Function's test result: untested
+ 474          //------------------------------------------------------------------------------------
+ 475          #if (DEBUGGING_FEATURE == 1)
+ 476          unsigned short pwrsSetSOCLimit (unsigned char l_uc_pwrs_soc_on_limit, unsigned char l_uc_pwrs_soc_off_limi
+             -t, unsigned char l_uc_record_time_par)
+ 477          #else
+              unsigned short pwrsSetSOCLimit (unsigned char l_uc_pwrs_soc_on_limit, unsigned char l_uc_pwrs_soc_off_limi
+             -t)
+              #endif
+C51 COMPILER V9.02   LUXP_PWRS                                                             01/09/2014 12:21:20 PAGE 9   
+
+ 480          {
+ 481   1              unsigned short l_us_error_code = EC_INIT;       
+ 482   1      
+ 483   1              #if (DEBUGGING_FEATURE == 1)
+ 484   1              //To initialize time recording (if assigned)
+ 485   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 486   1              #endif
+ 487   1      
+ 488   1              //To initialize transmission parameters 
+ 489   1              g_uc_i2c_target = PWRS_ADDR;
+ 490   1              g_uc_i2c_msg_out = PWRS_I2C_SET_SOC_LIMIT;
+ 491   1              g_uc_i2c_transferred_byte_out = PWRS_I2C_SET_SOC_LIMIT_WR;
+ 492   1      
+ 493   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 494   1              g_uc_i2c_data_out[1] = l_uc_pwrs_soc_on_limit;
+ 495   1              g_uc_i2c_data_out[2] = l_uc_pwrs_soc_off_limit;
+ 496   1              
+ 497   1              //To transmit I2C command
+ 498   1              l_us_error_code = i2cWrite();
+ 499   1              
+ 500   1              #if (DEBUGGING_FEATURE == 1)
+ 501   1              //To end time recording
+ 502   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 503   1              #endif
+ 504   1      
+ 505   1              return l_us_error_code; 
+ 506   1      }
+ 507          
+ 508          //------------------------------------------------------------------------------------
+ 509          // To set WDT limit
+ 510          //------------------------------------------------------------------------------------
+ 511          // Function's test result: untested
+ 512          //------------------------------------------------------------------------------------
+ 513          #if (DEBUGGING_FEATURE == 1)
+ 514          unsigned short pwrsSetWDTLimit (unsigned long l_ul_pwrs_wdt_limit, unsigned char l_uc_record_time_par)
+ 515          #else
+              unsigned short pwrsSetWDTLimit (unsigned long l_ul_pwrs_wdt_limit)
+              #endif
+ 518          {
+ 519   1              unsigned short l_us_error_code = EC_INIT;       
+ 520   1              unsigned short l_us_i2c_size = 0;
+ 521   1      
+ 522   1              #if (DEBUGGING_FEATURE == 1)
+ 523   1              //To initialize time recording (if assigned)
+ 524   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 525   1              #endif
+ 526   1      
+ 527   1              //To initialize transmission parameters 
+ 528   1              g_uc_i2c_target = PWRS_ADDR;
+ 529   1              g_uc_i2c_msg_out = PWRS_I2C_SET_WDT_LIMIT;
+ 530   1              g_uc_i2c_transferred_byte_out = PWRS_I2C_SET_WDT_LIMIT_WR;
+ 531   1      
+ 532   1              g_uc_i2c_data_out[l_us_i2c_size++] = g_uc_i2c_msg_out;
+ 533   1              l_us_i2c_size = insertLongToArray(l_ul_pwrs_wdt_limit, &g_uc_i2c_data_out, l_us_i2c_size);      
+ 534   1      
+ 535   1              //To transmit I2C command
+ 536   1              l_us_error_code = i2cWrite();
+ 537   1              
+ 538   1              #if (DEBUGGING_FEATURE == 1)
+ 539   1              //To end time recording
+ 540   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 541   1              #endif
+C51 COMPILER V9.02   LUXP_PWRS                                                             01/09/2014 12:21:20 PAGE 10  
+
+ 542   1      
+ 543   1              return l_us_error_code; 
+ 544   1      }
+ 545          
+ 546          //------------------------------------------------------------------------------------
+ 547          // To reset EEPROM to its initial state
+ 548          //------------------------------------------------------------------------------------
+ 549          // Function's test result: untested
+ 550          //------------------------------------------------------------------------------------
+ 551          #if (DEBUGGING_FEATURE == 1)
+ 552          unsigned short pwrsInitEeprom (unsigned char l_uc_record_time_par)
+ 553          #else
+              unsigned short pwrsInitEeprom (void)
+              #endif
+ 556          {
+ 557   1              unsigned short l_us_error_code = EC_INIT;       
+ 558   1      
+ 559   1              #if (DEBUGGING_FEATURE == 1)
+ 560   1              //To initialize time recording (if assigned)
+ 561   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 562   1              #endif
+ 563   1      
+ 564   1              //To initialize transmission parameters 
+ 565   1              g_uc_i2c_target = PWRS_ADDR;
+ 566   1              g_uc_i2c_msg_out = PWRS_I2C_EEPROM_INIT;
+ 567   1              g_uc_i2c_transferred_byte_out = PWRS_I2C_EEPROM_INIT_WR;
+ 568   1      
+ 569   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 570   1      
+ 571   1              //To transmit I2C command
+ 572   1              l_us_error_code = i2cWrite();
+ 573   1              
+ 574   1              #if (DEBUGGING_FEATURE == 1)
+ 575   1              //To end time recording
+ 576   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 577   1              #endif
+ 578   1      
+ 579   1              return l_us_error_code; 
+ 580   1      }
+ 581          
+ 582          //------------------------------------------------------------------------------------
+ 583          // To set PWRS SDC
+ 584          //------------------------------------------------------------------------------------
+ 585          // Function's test result: untested
+ 586          //------------------------------------------------------------------------------------
+ 587          #if (DEBUGGING_FEATURE == 1)
+ 588          unsigned short pwrsSetSDC (unsigned char l_uc_pwrs_sdc, unsigned char l_uc_record_time_par)
+ 589          #else
+              unsigned short pwrsSetSDC (unsigned char l_uc_pwrs_sdc)
+              #endif
+ 592          {
+ 593   1              unsigned short l_us_error_code = EC_INIT;       
+ 594   1      
+ 595   1              #if (DEBUGGING_FEATURE == 1)
+ 596   1              //To initialize time recording (if assigned)
+ 597   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 598   1              #endif
+ 599   1      
+ 600   1              //To initialize transmission parameters 
+ 601   1              g_uc_i2c_target = PWRS_ADDR;
+ 602   1              g_uc_i2c_msg_out = PWRS_I2C_SET_PWRS_SDC;
+ 603   1              g_uc_i2c_transferred_byte_out = PWRS_I2C_SET_PWRS_SDC_WR;
+C51 COMPILER V9.02   LUXP_PWRS                                                             01/09/2014 12:21:20 PAGE 11  
+
+ 604   1      
+ 605   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 606   1              g_uc_i2c_data_out[1] = l_uc_pwrs_sdc;
+ 607   1              
+ 608   1              //To transmit I2C command
+ 609   1              l_us_error_code = i2cWrite();
+ 610   1              
+ 611   1              #if (DEBUGGING_FEATURE == 1)
+ 612   1              //To end time recording
+ 613   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 614   1              #endif
+ 615   1      
+ 616   1              return l_us_error_code; 
+ 617   1      }
+ 618          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1330    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----      70
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,930 @@
+C51 COMPILER V9.02   LUXP_SEND                                                             01/09/2014 12:21:21 PAGE 1   
+
+
+C51 COMPILER V9.02, COMPILATION OF MODULE LUXP_SEND
+NO OBJECT MODULE REQUESTED
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE luxp_send.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+*** WARNING C500 IN LINE 1 OF LUXP_SEND.C: LICENSE ERROR (R20D: CONTENT ERROR IN FLF FILE)
+
+   1          //------------------------------------------------------------------------------------
+   2          // Luxp_send.c
+   3          //------------------------------------------------------------------------------------
+   4          // Copyright (C) 2013 Nanyang Technological University.
+   5          //
+   6          // AUTH: IAN
+   7          // DATE: 03 APR 2013
+   8          //
+   9          // The program Luxp_send.c will be downloaded to the Pumpkin Motherboard with 
+  10          // C8051F120 uC as part of the VELOX-P Pico-Satellite Flight Software. 
+  11          //
+  12          // This file contains all functions related to sending data to the debugger and
+  13          // to the ground station
+  14          //
+  15          //------------------------------------------------------------------------------------
+  16          
+  17          #include <luxp_send.h>
+  18          
+  19          //------------------------------------------------------------------------------------
+  20          // Send Functions
+  21          //------------------------------------------------------------------------------------
+  22          
+  23          #if (DEBUGGING_FEATURE == 1)
+  24          #if (UART_LINE == 1)
+  25          //-----------------------------------------------------------------------------
+  26          // To send a set of data in an array through UART1 interface
+  27          //-----------------------------------------------------------------------------
+  28          void sendToUART1 (unsigned char *l_uc_msg_p, unsigned short l_us_starting_index, unsigned short l_us_no_of
+             -_bytes)
+  29          {
+  30   1              unsigned short l_us_counter;
+  31   1              unsigned short l_us_last_index;
+  32   1              char SFRPAGE_SAVE = SFRPAGE;
+  33   1              
+  34   1              l_us_last_index = l_us_starting_index + l_us_no_of_bytes - 1;
+  35   1               
+  36   1              SFRPAGE = UART1_PAGE;
+  37   1      
+  38   1              for (l_us_counter = l_us_starting_index; l_us_counter <= l_us_last_index; l_us_counter++){
+  39   2                      SBUF1 = *(l_uc_msg_p + l_us_counter);
+  40   2                      waitUs(TIME_DELAY_UART_ONE_CHAR_TRANSMISSION_US);
+  41   2                      while(TI1);
+  42   2                      waitUs(TIME_DELAY_UART_ONE_CHAR_TRANSMISSION_US);
+  43   2              }
+  44   1      
+  45   1              SFRPAGE = SFRPAGE_SAVE;
+  46   1      }
+  47          
+  48          #elif (UART_LINE == 0)
+              //-----------------------------------------------------------------------------
+              // To send a set of data in an array through UART0 interface
+              //-----------------------------------------------------------------------------
+              void sendToUART0 (unsigned char *l_uc_msg_p, unsigned short l_us_starting_index, unsigned short l_us_no_of
+             -_bytes)
+C51 COMPILER V9.02   LUXP_SEND                                                             01/09/2014 12:21:21 PAGE 2   
+
+              {
+                      unsigned short l_us_counter;
+                      unsigned short l_us_last_index;
+                      char SFRPAGE_SAVE = SFRPAGE;
+                      
+                      l_us_last_index = l_us_starting_index + l_us_no_of_bytes - 1;
+                       
+                      SFRPAGE = UART0_PAGE;
+              
+                      for (l_us_counter = l_us_starting_index; l_us_counter <= l_us_last_index; l_us_counter++){
+                              SBUF0 = *(l_uc_msg_p + l_us_counter);
+                              waitUs(TIME_DELAY_UART_ONE_CHAR_TRANSMISSION_US);
+                              while(TI0);
+                              waitUs(TIME_DELAY_UART_ONE_CHAR_TRANSMISSION_US);
+                      }
+              
+                      SFRPAGE = SFRPAGE_SAVE;
+              }
+              #else
+              #endif
+  73          #endif
+  74          
+  75          //-----------------------------------------------------------------------------
+  76          // To choose what are to be sent
+  77          // l_us_option_bits structure:
+  78          //              bit15-13 = send global variables (0xE000)                       - 9TH, 1/2/4 BYTES
+  79          //                               001 - g_uc
+  80          //                               010 - g_us
+  81          //                               011 - g_s
+  82          //                               100 - g_ul
+  83          //                               101 - reserved
+  84          //                               110 - g_f
+  85          //                               111 - reserved
+  86          //              bit12-10 = send OBDH exclusive buffer (0x1C00)          - 8TH, 256/512 BYTES
+  87          //                               000 - None
+  88          //                               001 - SD card data in
+  89          //                               010 - SD card data out
+  90          //                               011 - Complete SMBin
+  91          //                               100 - Complete SMBout
+  92          //              bit9 = send global checksum register (0x0200)           - 7TH, 4 BYTES
+  93          //              bit8-6 = send OBDH exclusive info (0x01C0)              
+  94          //                               000 - None
+  95          //                               001 - Satellite date (0x004x)                          - 6TH, 8 BYTES
+  96          //                               010 - Satellite time (0x008x)                          - 6TH, 7 BYTES
+  97          //                               011 - Satellite time (in seconds) (0x00Cx) - 6TH, 4 BYTES
+  98          //                               100 - Satellite reference date (0x010x)        - 6TH, 8 BYTES
+  99          //                               101 - OBDH firmware version (0x014x)           - 6TH, 17 BYTES
+ 100          //                               110 - OBDH block pointers (0x018x)             - 6TH, 56 BYTES
+ 101          //                               111 - OBDH latest state (0x01Cx)                       - 6TH, 18 BYTES
+ 102          //              bit5-4 = send subsystem's complete data (0x0030)
+ 103          //                               00 - None
+ 104          //                               01 - ISIS (0x001x)                                             - 5TH, 42 BYTES
+ 105          //                               10 - ADCS (0x002x)                                             - 5TH, 250 BYTES
+ 106          //                               11 - PWRS (0x003x)                                             - 5TH, 35 BYTES
+ 107          //              bit3 = send error code (0x0008)                                         - 1ST, 2 BYTES 
+ 108          //              bit2 = send SMBOut (0x0004)                                             - 3RD, g_uc_i2c_transferred_byte_out BYTES 
+ 109          //              bit1 = send SMBIn (0x0002)                                                      - 4TH, g_uc_i2c_transferred_byte_in BYTES
+ 110          //              bit0 = send time recorded value (0x0001)                        - 2ND, 4 BYTES
+ 111          //-----------------------------------------------------------------------------
+ 112          unsigned short sendOptions (unsigned short l_us_option_bits, unsigned char *l_uc_array_p)
+ 113          {
+ 114   1              unsigned short l_us_data_counter = 1;
+C51 COMPILER V9.02   LUXP_SEND                                                             01/09/2014 12:21:21 PAGE 3   
+
+ 115   1      
+ 116   1              //Send error code
+ 117   1              if (l_us_option_bits & 0x0008) 
+ 118   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_OBDH_G_US_ERROR_CODE,0);
+ 119   1              
+ 120   1              //Send time reading
+ 121   1              if (l_us_option_bits & 0x0001) 
+ 122   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_OBDH_G_F_RUN_TIME,0);
+ 123   1      
+ 124   1              //Send SMB out
+ 125   1              if (l_us_option_bits & 0x0004) 
+ 126   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_BUF_I2C_DATA_OUT_VARY,g_uc_i2c_tran
+             -sferred_byte_out);
+ 127   1      
+ 128   1              //Send SMB In
+ 129   1              if (l_us_option_bits & 0x0002) 
+ 130   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_BUF_I2C_DATA_IN_VARY,g_uc_i2c_trans
+             -ferred_byte_in);
+ 131   1      
+ 132   1              //Send ISIS complete data
+ 133   1              if ((l_us_option_bits & 0x0030) == 0x0010) 
+ 134   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_COMM_HK,0);
+ 135   1      
+ 136   1              //Send ADCS complete data
+ 137   1              else if ((l_us_option_bits & 0x0030) == 0x0020)
+ 138   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_ADCS_HK,0);
+ 139   1      
+ 140   1              //Send PWRS complete data
+ 141   1              else if ((l_us_option_bits & 0x0030) == 0x0030) 
+ 142   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_PWRS_HK,0);
+ 143   1              
+ 144   1              //Send satellite date
+ 145   1              if ((l_us_option_bits & 0x01C0) == 0x0040) 
+ 146   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_SAT_DATE_CURRENT,0);
+ 147   1      
+ 148   1              //Send satellite time
+ 149   1              else if ((l_us_option_bits & 0x01C0) == 0x0080) 
+ 150   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_SAT_TIME,0);
+ 151   1      
+ 152   1              //Send satellite time (in seconds)
+ 153   1              else if ((l_us_option_bits & 0x01C0) == 0x00C0) 
+ 154   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_OBDH_UL_OBC_TIME_S,0);
+ 155   1      
+ 156   1              //Send satellite reference date
+ 157   1              else if ((l_us_option_bits & 0x01C0) == 0x0100) 
+ 158   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_SAT_DATE_INIT,0);
+ 159   1      
+ 160   1              //Send OBDH firmware version
+ 161   1              else if ((l_us_option_bits & 0x01C0) == 0x0140) 
+ 162   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_OBDH_FIRMWARE_VERSION,OBDH_FIRMWARE
+             -_VERSION_LENGTH);
+ 163   1      
+ 164   1              //Send OBDH block pointers
+ 165   1              else if ((l_us_option_bits & 0x01C0) == 0x0180) 
+ 166   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_OBDH_BP,0);
+ 167   1      
+ 168   1              //Send OBDH latest state
+ 169   1              else if ((l_us_option_bits & 0x01C0) == 0x01C0) 
+ 170   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_SAT_STATE,0);
+ 171   1              
+ 172   1              //Send global checksum register
+ 173   1              if (l_us_option_bits & 0x0200) 
+C51 COMPILER V9.02   LUXP_SEND                                                             01/09/2014 12:21:21 PAGE 4   
+
+ 174   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_OBDH_G_US_CHECKSUM_REGISTER,0);
+ 175   1              
+ 176   1              //Send SD card data in
+ 177   1              if ((l_us_option_bits & 0x1C00) == 0x0400)
+ 178   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_BUF_SD_DATA_IN,SD_CARD_BUFFER_SIZE)
+             -;
+ 179   1              
+ 180   1              //Send SD card data out
+ 181   1              else if ((l_us_option_bits & 0x1C00) == 0x0800)
+ 182   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_BUF_SD_DATA_OUT,SD_CARD_BUFFER_SIZE
+             -);
+ 183   1                      
+ 184   1              //Send complete SMB in
+ 185   1              else if ((l_us_option_bits & 0x1C00) == 0x0C00)
+ 186   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_BUF_I2C_DATA_IN_VARY,I2C_BUFFER_SIZ
+             -E);
+ 187   1      
+ 188   1              //Send complete SMB out
+ 189   1              else if ((l_us_option_bits & 0x1C00) == 0x1000)
+ 190   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_BUF_I2C_DATA_OUT_VARY,I2C_BUFFER_SI
+             -ZE);
+ 191   1      
+ 192   1              //Send global variable g_uc
+ 193   1              if ((l_us_option_bits & 0xE000) == 0x2000)
+ 194   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_OBDH_MP_VAR_G_UC,0);
+ 195   1      
+ 196   1              //Send global variable g_us
+ 197   1              else if ((l_us_option_bits & 0xE000) == 0x4000)
+ 198   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_OBDH_MP_VAR_G_US,0);
+ 199   1      
+ 200   1              //Send global variable g_s
+ 201   1              else if ((l_us_option_bits & 0xE000) == 0x6000)
+ 202   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_OBDH_MP_VAR_G_S,0);
+ 203   1      
+ 204   1              //Send global variable g_ul
+ 205   1              else if ((l_us_option_bits & 0xE000) == 0x8000)
+ 206   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_OBDH_MP_VAR_G_UL,0);
+ 207   1      
+ 208   1              //Send global variable g_f
+ 209   1              else if ((l_us_option_bits & 0xE000) == 0xC000)
+ 210   1                      l_us_data_counter = fillData(l_uc_array_p,l_us_data_counter,DATA_CAT_OBDH_MP_VAR_G_F,0);
+ 211   1              
+ 212   1              return l_us_data_counter;
+ 213   1      }
+ 214          
+ 215          #if (SENDING_ENABLE == 1)
+ 216          #if (ISIS_CMD_ENABLE == 1)
+ 217          //-----------------------------------------------------------------------------
+ 218          // To initialize sending data
+ 219          //-----------------------------------------------------------------------------
+ 220          // This function is meant to start various initializations for various data
+ 221          // send request given (only valid for sending data from temporary buffer)
+ 222          //-----------------------------------------------------------------------------
+ 223          unsigned short initSendData (void)
+ 224          {
+ 225   1              unsigned short l_us_error_code = EC_INIT;
+ 226   1              unsigned char l_uc_data_type_sent_counter = 0;
+ 227   1              unsigned char l_uc_max_counter_k = 0;
+ 228   1              unsigned char l_uc_no_of_sent_needed = 0;
+ 229   1              unsigned char l_uc_i = 0;
+ 230   1      
+ 231   1              if(!(g_uc_strsnd_flag & SNDNG_FLAG_ON_GOING)){
+C51 COMPILER V9.02   LUXP_SEND                                                             01/09/2014 12:21:21 PAGE 5   
+
+ 232   2                      if(!(g_uc_ax25_header_package_property & AX25_HEADER_PROPERTY_STORED_DATA_BIT)){
+ 233   3                              //Initiates AX25 frame sending variables for different cases
+ 234   3                              //------------------------------------------------------------------------------------
+ 235   3                              if ((g_uc_ax25_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_ax25_header_data_type == SD_ESSENTIAL)){
+ 236   4                                      g_uc_data_type_sent_buffer[0]   = DATA_CAT_ACK_MSG;
+ 237   4                                      g_uc_data_type_sent_buffer[1]   = DATA_CAT_SAT_STATE;
+ 238   4                                      g_uc_data_type_sent_buffer[2]   = DATA_CAT_OBDH_BP;
+ 239   4                                      g_uc_no_of_data_sent                    = 3;
+ 240   4                                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 241   4                              }
+ 242   3                              else if ((g_uc_ax25_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_ax25_header_data_type == SD_HK)){
+ 243   4                                      g_uc_data_type_sent_buffer[0]   = DATA_CAT_ACK_MSG;
+ 244   4                                      g_uc_data_type_sent_buffer[1]   = DATA_CAT_LATEST_HK_SAMPLING_TIME_TAI_FORMAT;
+ 245   4                                      g_uc_data_type_sent_buffer[2]   = DATA_CAT_LAST_HK_EC;
+ 246   4                                      g_uc_data_type_sent_buffer[3]   = DATA_CAT_PWRS_HK;
+ 247   4                                      g_uc_data_type_sent_buffer[4]   = DATA_CAT_ADCS_HK;
+ 248   4                                      g_uc_data_type_sent_buffer[5]   = DATA_CAT_COMM_HK;
+ 249   4                                      g_uc_data_type_sent_buffer[6]   = DATA_CAT_OBDH_HK;
+ 250   4                                      g_uc_no_of_data_sent                    = 7;
+ 251   4                                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 252   4                              }
+ 253   3                              else if ((g_uc_ax25_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_ax25_header_data_type == SD_SSCP)){
+ 254   4                                      g_uc_data_type_sent_buffer[0]   = DATA_CAT_ACK_MSG;
+ 255   4                                      g_uc_data_type_sent_buffer[1]   = DATA_CAT_PWRS_SSCP;
+ 256   4                                      g_uc_data_type_sent_buffer[2]   = DATA_CAT_ADCS_SSCP;
+ 257   4                                      g_uc_data_type_sent_buffer[3]   = DATA_CAT_OBDH_SSCP;
+ 258   4                                      g_uc_no_of_data_sent                    = 4;
+ 259   4                                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 260   4                              }
+ 261   3                              else if ((g_uc_ax25_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_ax25_header_data_type == SD_BP)){
+ 262   4                                      g_uc_data_type_sent_buffer[0]   = DATA_CAT_ACK_MSG;
+ 263   4                                      g_uc_data_type_sent_buffer[1]   = DATA_CAT_OBDH_BP;
+ 264   4                                      g_uc_no_of_data_sent                    = 2;
+ 265   4                                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 266   4                              }
+ 267   3                              else if ((g_uc_ax25_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_ax25_header_data_type == SD_SCHEDULE))
+             -{
+ 268   4                                      g_uc_data_type_sent_buffer[l_uc_data_type_sent_counter++]               = DATA_CAT_ACK_MSG;
+ 269   4                                      g_uc_data_type_sent_buffer[l_uc_data_type_sent_counter++]               = DATA_CAT_SCHEDULE_PAR;
+ 270   4                                      l_uc_max_counter_k                                                                                              = (MAX_AX25_CONTENT_SIZE-ACK_MSG_SIZE-1)/(SCHEDULER_NON_ARG_SIZE+MAX_SC
+             -HEDULER_ARG);
+ 271   4                                      l_uc_no_of_sent_needed                                                                                  = (str_obdh_hk.uc_scheduler_block_size+l_uc_max_counter_k-1)/l_uc_ma
+             -x_counter_k;
+ 272   4                                      if (l_uc_no_of_sent_needed > (MAX_NO_OF_DATA_TYPE_TO_BE_SENT-l_uc_data_type_sent_counter))
+ 273   4                                              l_uc_no_of_sent_needed = MAX_NO_OF_DATA_TYPE_TO_BE_SENT-l_uc_data_type_sent_counter;
+ 274   4                                      while(l_uc_no_of_sent_needed){
+ 275   5                                              g_uc_data_type_sent_buffer[l_uc_data_type_sent_counter++]       = DATA_CAT_FILLED_SCHEDULE;
+ 276   5                                              l_uc_no_of_sent_needed--;
+ 277   5                                      }
+ 278   4                                      g_uc_no_of_data_sent                                                                                    = l_uc_data_type_sent_counter;
+ 279   4                                      l_us_error_code                                                                                                 = EC_SUCCESSFUL;
+ 280   4                              }
+ 281   3                              else if ((g_uc_ax25_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_ax25_header_data_type == SD_SCRIPT)){
+ 282   4                                      g_uc_data_type_sent_buffer[0]   = DATA_CAT_ACK_MSG;
+ 283   4                                      g_uc_data_type_sent_buffer[1]   = DATA_CAT_SCRIPTSPACE_PAR;
+ 284   4                                      g_uc_data_type_sent_buffer[2]   = DATA_CAT_SCRIPTSPACE_1;
+ 285   4                                      g_uc_data_type_sent_buffer[3]   = DATA_CAT_SCRIPTSPACE_2;
+ 286   4                                      g_uc_data_type_sent_buffer[4]   = DATA_CAT_SCRIPTSPACE_3;
+ 287   4                                      g_uc_data_type_sent_buffer[5]   = DATA_CAT_SCRIPTSPACE_4;
+ 288   4                                      g_uc_data_type_sent_buffer[6]   = DATA_CAT_SCRIPTSPACE_5;
+ 289   4                                      g_uc_data_type_sent_buffer[7]   = DATA_CAT_SCRIPTSPACE_6;
+ 290   4                                      g_uc_data_type_sent_buffer[8]   = DATA_CAT_SCRIPTSPACE_7;
+C51 COMPILER V9.02   LUXP_SEND                                                             01/09/2014 12:21:21 PAGE 6   
+
+ 291   4                                      g_uc_data_type_sent_buffer[9]   = DATA_CAT_SCRIPTSPACE_8;
+ 292   4                                      g_uc_data_type_sent_buffer[10]  = DATA_CAT_SCRIPTSPACE_9;
+ 293   4                                      g_uc_data_type_sent_buffer[11]  = DATA_CAT_SCRIPTSPACE_10;
+ 294   4                                      g_uc_no_of_data_sent                    = 12;
+ 295   4                                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 296   4                              }
+ 297   3                              else if ((g_uc_ax25_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_ax25_header_data_type == SD_COMPLETE_T
+             -ASK_STRUCTURE)){
+ 298   4                                      g_uc_data_type_sent_buffer[0]   = DATA_CAT_ACK_MSG;
+ 299   4                                      g_uc_data_type_sent_buffer[1]   = DATA_CAT_COMPLETE_TASK_STRUCTURE;
+ 300   4                                      g_uc_no_of_data_sent                    = 2;
+ 301   4                                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 302   4                              }
+ 303   3                              else if ((g_uc_ax25_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_ax25_header_data_type == SD_SAT_TIME))
+             -{
+ 304   4                                      g_uc_data_type_sent_buffer[0]   = DATA_CAT_ACK_MSG;
+ 305   4                                      g_uc_data_type_sent_buffer[1]   = DATA_CAT_OBDH_PAR_TAI_UL_OBC_TIME_S;
+ 306   4                                      g_uc_no_of_data_sent                    = 2;
+ 307   4                                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 308   4                              }
+ 309   3                              else if ((g_uc_ax25_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_ax25_header_data_type == SD_SAT_REV)){
+ 310   4                                      g_uc_data_type_sent_buffer[0]   = DATA_CAT_ACK_MSG;
+ 311   4                                      g_uc_data_type_sent_buffer[1]   = DATA_CAT_SAT_REV_NO_IN_FLOAT;
+ 312   4                                      g_uc_no_of_data_sent                    = 2;
+ 313   4                                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 314   4                              }
+ 315   3                              else if ((g_uc_ax25_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_ax25_header_data_type == SD_SINGLE_SUB
+             -SYSTEM_DATA)){
+ 316   4                                      g_uc_data_type_sent_buffer[0]   = DATA_CAT_ACK_MSG;
+ 317   4                                      g_uc_data_type_sent_buffer[1]   = DATA_CAT_SINGLE_SUBSYSTEM_DATA;
+ 318   4                                      g_uc_no_of_data_sent                    = 2;
+ 319   4                                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 320   4                              }
+ 321   3                              else if ((g_uc_ax25_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_ax25_header_data_type == SD_GP_REQUEST
+             -_KEY)){
+ 322   4                                      g_uc_data_type_sent_buffer[0]   = DATA_CAT_ACK_MSG;
+ 323   4                                      g_uc_data_type_sent_buffer[1]   = DATA_CAT_GP_REQUEST_KEY;
+ 324   4                                      g_uc_no_of_data_sent                    = 2;
+ 325   4                                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 326   4                              }
+ 327   3                              else if ((g_uc_ax25_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_ax25_header_data_type == SD_REAL_TIME)
+             -){
+ 328   4                                      g_uc_data_type_sent_buffer[0]   = DATA_CAT_LAST_HK_EC;
+ 329   4                                      g_uc_data_type_sent_buffer[1]   = DATA_CAT_PWRS_HK;
+ 330   4                                      g_uc_data_type_sent_buffer[2]   = DATA_CAT_ADCS_HK;
+ 331   4                                      g_uc_data_type_sent_buffer[3]   = DATA_CAT_COMM_HK;
+ 332   4                                      g_uc_data_type_sent_buffer[4]   = DATA_CAT_OBDH_HK;
+ 333   4                                      g_uc_no_of_data_sent                    = 5;
+ 334   4                                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 335   4                              }
+ 336   3                              //Before calling to send in the free category,
+ 337   3                              //g_uc_data_type_sent_buffer[] and g_uc_no_of_data_sent must be declared outside of this function
+ 338   3                              else if ((g_uc_ax25_header_subsystem == OBDH_SUBSYSTEM) && (g_uc_ax25_header_data_type == SD_FREE_CATEG
+             -ORY)){
+ 339   4                                      l_us_error_code                                 = EC_SUCCESSFUL;
+ 340   4                              }
+ 341   3                              else {
+ 342   4                                      g_us_gsch_error_code                    = EC_INVALID_SENDING_DATA_REQUEST;
+ 343   4                                      g_uc_data_type_sent_buffer[0]   = DATA_CAT_ACK_MSG;
+ 344   4                                      g_uc_no_of_data_sent                    = 1;                    
+ 345   4                                      l_us_error_code                                 = EC_INVALID_SENDING_DATA_REQUEST;
+ 346   4                              }
+C51 COMPILER V9.02   LUXP_SEND                                                             01/09/2014 12:21:21 PAGE 7   
+
+ 347   3                              //------------------------------------------------------------------------------------
+ 348   3                      }
+ 349   2                      else l_us_error_code = EC_SUCCESSFUL;
+ 350   2              }
+ 351   1              else l_us_error_code = EC_SENDING_PROCESS_IS_ON_GOING;
+ 352   1      
+ 353   1              return l_us_error_code;
+ 354   1      }
+ 355          
+ 356          #if (BEACON_HANDLER_ENABLE == 1)
+ 357          //-----------------------------------------------------------------------------
+ 358          // To send data
+ 359          //-----------------------------------------------------------------------------
+ 360          // This function is to sent down whatever data asked to the ground station
+ 361          //
+ 362          // There are two possibilities so far as data source is concerned:
+ 363          //      1) Data comes from the temporary buffer
+ 364          //      2) Data comes from the permanent storage
+ 365          //
+ 366          // If data comes from the temporary buffer, then data can be sent by category,
+ 367          // and can be processed exactly the same way as how we save data in the SD card
+ 368          //
+ 369          // If data comes from the permanent storage, this function is not to be mixed
+ 370          // with how many data block (from the permanent storage) needs to be sent.
+ 371          // Thus, this function will only capable to send data from the SD card buffer
+ 372          // alone instead of from the permanent storage. The aim of this function is to
+ 373          // make sure that whatever useful information in the SD card buffer is sent 
+ 374          // down. But if there is a need to send data more than one SD card block. This
+ 375          // requirement must be done outside of this function.
+ 376          //
+ 377          // Most important variable used in this function is g_uc_ax25_header_package_property
+ 378          // whose bits defined as follow:
+ 379          //      Bit1-0: on-going/end package
+ 380          //              01 - on-going
+ 381          //              10 - end
+ 382          //      Bit2: temporary buffer/SD card buffer
+ 383          //              0 - temporary buffer
+ 384          //              1 - SD card buffer
+ 385          //      Bit7-3: reserved
+ 386          //-----------------------------------------------------------------------------
+ 387          unsigned short sendData (void)
+ 388          {
+ 389   1              unsigned short l_us_error_code;
+ 390   1          unsigned char l_uc_counter = 0;
+ 391   1              unsigned char l_uc_remaining_ax25_space = 0;
+ 392   1              unsigned char l_uc_max_counter = 0;
+ 393   1              unsigned char l_uc_initial_data_sent_counter;
+ 394   1              unsigned char l_uc_break_when_sending = 0;
+ 395   1          unsigned short l_us_current_data_set_length = 0;
+ 396   1          unsigned short l_us_total_to_be_data_length = 0;
+ 397   1              unsigned short l_us_sd_card_meaningful_data_size = 0;
+ 398   1              unsigned char *l_uc_data_type_sent_buffer_p;
+ 399   1      
+ 400   1              //Initialize the SD card content index buffer here (once)
+ 401   1              static unsigned short l_us_sd_card_content_index_p = SD_CARD_HEADER_SIZE;
+ 402   1      
+ 403   1              //Initialize data sets to be sent buffer pointer
+ 404   1              l_uc_data_type_sent_buffer_p    = g_uc_data_type_sent_buffer;
+ 405   1          
+ 406   1          //Temporary test buffer pointer is removed
+ 407   1      
+ 408   1              //If this is the first time sending, 
+C51 COMPILER V9.02   LUXP_SEND                                                             01/09/2014 12:21:21 PAGE 8   
+
+ 409   1              //Go through all the first-time initialization
+ 410   1              if(!(g_uc_strsnd_flag & SNDNG_FLAG_ON_GOING)){
+ 411   2                      //Mark an on going sending
+ 412   2                      g_uc_strsnd_flag |= SNDNG_FLAG_ON_GOING;
+ 413   2      
+ 414   2                      //Set current data sent counter as zero
+ 415   2                      g_uc_current_data_sent_counter = 0;
+ 416   2                      
+ 417   2                      //If the source is not from SD card
+ 418   2                      if (!(g_uc_ax25_header_package_property & AX25_HEADER_PROPERTY_STORED_DATA_BIT))
+ 419   2                              //Set current package no to 1
+ 420   2                              g_uc_ax25_header_no_of_this_package = 1;
+ 421   2                      //If the source is from SD card, the initialization no of the package should be declared outside of this
+             - function
+ 422   2              
+ 423   2                      //Set package property to be on-going data set now, so long as this function does not go out from the ma
+             -in loop,
+ 424   2                      //the package property will always be on-going
+ 425   2                      //WARNING: the property whether this data source comes from SD card or other temporary buffer
+ 426   2                      //must be defined outside of this function
+ 427   2                      g_uc_ax25_header_package_property &= ~AX25_HEADER_PROPERTY_ON_GOING_END_TRANSMISSION_FILTER;
+ 428   2                      g_uc_ax25_header_package_property |= AX25_HEADER_PROPERTY_ON_GOING_TRANSMISSION_BIT;
+ 429   2              
+ 430   2                      //Initialize package size as AX25_HEADER_SIZE, which is the initial length for any AX25 data writing
+ 431   2                      g_uc_ax25_header_this_package_size = AX25_HEADER_SIZE;
+ 432   2      
+ 433   2                      //If the data source is SD card buffer
+ 434   2                      if (g_uc_ax25_header_package_property & AX25_HEADER_PROPERTY_STORED_DATA_BIT){
+ 435   3                              //Hold data saving. The counter is set before the flag
+ 436   3                              g_uc_save_data_hold_timeout_counter = 0;
+ 437   3                              g_uc_strsnd_flag |= STRNG_FLAG_SAVE_DATA_HOLD;
+ 438   3              
+ 439   3                              //Check SD card meaningful bytes by reading its header (CRC16 included)
+ 440   3                              g_us_sd_card_meaningful_data_size = ((g_uc_sd_data_buffer[6] << 8) + g_uc_sd_data_buffer[7]) + 3;
+ 441   3              
+ 442   3                              //Limit meaningful bytes to SD_CARD_BUFFER_SIZE (maximum is 512 if we take CRC16 into account)
+ 443   3                              if (g_us_sd_card_meaningful_data_size > SD_CARD_BUFFER_SIZE)
+ 444   3                                      g_us_sd_card_meaningful_data_size = SD_CARD_BUFFER_SIZE;
+ 445   3              
+ 446   3                              //First package always contain acknowledgement message
+ 447   3                              if (!(g_uc_ax25_header_package_property & AX25_HEADER_PROPERTY_ON_GOING_STORED_DATA_BIT)){
+ 448   4                                      g_uc_ax25_header_this_package_size = fillData(g_uc_ax25_message,g_uc_ax25_header_this_package_size,DAT
+             -A_CAT_ACK_MSG,0);
+ 449   4                                      g_uc_ax25_header_package_property |= AX25_HEADER_PROPERTY_ON_GOING_STORED_DATA_BIT;
+ 450   4                              }
+ 451   3              
+ 452   3                              //Indicate that this is the beginning of the SD card buffer
+ 453   3                              g_uc_ax25_header_package_property |= AX25_HEADER_PROPERTY_START_OF_STORED_DATA_BIT;
+ 454   3      
+ 455   3                              //Fill the AX25 package with adjusted SD card block number and adjusted meaningful data length
+ 456   3                              g_uc_ax25_header_this_package_size = fillData(g_uc_ax25_message,g_uc_ax25_header_this_package_size,DATA
+             -_CAT_SD_HEADER_INFO_SENT,0);
+ 457   3                              
+ 458   3                              //Treats as if all header bytes have been taken
+ 459   3                              g_us_sd_card_meaningful_data_size -= SD_CARD_HEADER_SIZE;
+ 460   3      
+ 461   3                              //Re-initialize the SD card content index pointer to point the content of the SD card
+ 462   3                              l_us_sd_card_content_index_p = SD_CARD_HEADER_SIZE;
+ 463   3                      }
+ 464   2              }
+ 465   1      
+ 466   1              //If the sending is on-going
+C51 COMPILER V9.02   LUXP_SEND                                                             01/09/2014 12:21:21 PAGE 9   
+
+ 467   1              if (g_uc_strsnd_flag & SNDNG_FLAG_ON_GOING){     
+ 468   2                      //If the source is SD card buffer
+ 469   2                      if(g_uc_ax25_header_package_property & AX25_HEADER_PROPERTY_STORED_DATA_BIT){
+ 470   3                              //Hold data saving
+ 471   3                              g_uc_save_data_hold_timeout_counter = 0;
+ 472   3      
+ 473   3                              //Get the subsystem and data type information sent down from the SD card buffer header
+ 474   3                              g_uc_ax25_header_subsystem = g_uc_sd_data_buffer[0];
+ 475   3                              g_uc_ax25_header_data_type = g_uc_sd_data_buffer[1]; 
+ 476   3      
+ 477   3                              //Here, if there is special recovery package bit, the case will be very different:
+ 478   3                              //1) All initialized value in the AX25 frame will be nullified, the frame will be treated as
+ 479   3                              //   if nothing is there. 
+ 480   3                              //2) One thing for sure, if this is a recovery package, the content
+ 481   3                              //   of remaining meaningful data size of the SD card will not exceed 235.
+ 482   3                              //3) The last two bytes of the data are SD card CRC16 bytes .
+ 483   3                              //4) Thus, by minusing the last two bytes of the SD card meaningful data size (that is, the
+ 484   3                              //   SD card's CRC16 bytes) only the content of the SD card (which is the lost frame's content) 
+ 485   3                              //       is left.
+ 486   3                              //5) This makes the maximum remaining meaningful data size of the SD card becomes 233.
+ 487   3                              //6) Note that when we save the package sent for recovery purpose, we don't save its 
+ 488   3                              //       AX25 frame's CRC16 bytes, but only the content.
+ 489   3                              if (g_uc_ax25_header_package_property & AX25_HEADER_PROPERTY_PACKAGE_RECOVERY_DATA_BIT){
+ 490   4                                      //Reinitialize the package size
+ 491   4                                      g_uc_ax25_header_this_package_size = 0;
+ 492   4      
+ 493   4                                      //Discard the last two bytes of SD card content
+ 494   4                                      g_us_sd_card_meaningful_data_size -= 2;
+ 495   4                              }
+ 496   3      
+ 497   3                              //While there is a remaining meaningful SD card data
+ 498   3                              //Do not initialize the sending anymore, but declare variable for on going sending as running
+ 499   3                              //Thus, when it comes back to this function, it will start sending things out exactly where it
+ 500   3                              //stops. Some more, when satellite is sending, it will hold the data saving and data loading parameters
+ 501   3              
+ 502   3                              //Calculate space left in the AX25 frame buffer, that is 
+ 503   3                              //The maximum of MAX_AX25_CONTENT_SIZE + AX25_HEADER_SIZE = 233
+ 504   3                              //Minus g_uc_ax25_header_this_package_size, in the first case should be 15
+ 505   3                              //15 is when the very first time, since there are additional of ACK_MSG (+5) and SD_HEADER_REDUCED_INFO
+             - (+5), besides AX25_HEADER_SIZE (+5)
+ 506   3                              //The subsequent case should be 5/10
+ 507   3                              //10 is when the loading of new SD block, since there is an additional of SD_HEADER_REDUCED_INFO (+5), 
+             -besides AX25_HEADER_SIZE (+5)
+ 508   3                              //5 is due to AX25_HEADER_SIZE (+5) alone
+ 509   3                              //
+ 510   3                              //Thus 233 - 15 = 218 space left for the very first case
+ 511   3                              //Thus 233 - 5/10 = 228/223 space left for the subsequent cases
+ 512   3                              //
+ 513   3                              //For special recovery case, g_uc_ax25_header_this_package_size = 0. 
+ 514   3                              //Thus 233 space left for AX25 sending.
+ 515   3                              //
+ 516   3                              //The initialization for g_uc_ax25_header_this_package_size is done in the beginning of this function w
+             -hen
+ 517   3                              //SNDNG_FLAG_ON_GOING flag is not raised. It is initialized as AX25_HEADER_SIZE.
+ 518   3                              //
+ 519   3                              //For "safety standard programming" reason, however, the initialization is also done when the variable 
+             -first declared
+ 520   3                              l_uc_remaining_ax25_space = MAX_AX25_CONTENT_SIZE + AX25_HEADER_SIZE - g_uc_ax25_header_this_package_si
+             -ze;
+ 521   3              
+ 522   3                              //Check which one is lower, l_us_sd_card_meaningful_data_size OR l_uc_remaining_ax25_space
+ 523   3                              //Choose that one for the maximum number for the for loop
+C51 COMPILER V9.02   LUXP_SEND                                                             01/09/2014 12:21:21 PAGE 10  
+
+ 524   3                              //If l_uc_remaining_ax25_space is less than or equal to l_us_sd_card_meaningful_data_size
+ 525   3                              l_uc_max_counter = (l_uc_remaining_ax25_space <= g_us_sd_card_meaningful_data_size) ? l_uc_remaining_ax
+             -25_space : g_us_sd_card_meaningful_data_size;
+ 526   3              
+ 527   3                              //In whichever case, cut the g_us_sd_card_meaningful_data_size by that counter
+ 528   3                              //This is to update the size of the meaningful data in the SD card buffer to be sent down
+ 529   3                              g_us_sd_card_meaningful_data_size -= l_uc_max_counter;
+ 530   3              
+ 531   3                              //If the meaningful data size reaches zero by this time it indicates end of stored data buffer 
+ 532   3                              if (!g_us_sd_card_meaningful_data_size){
+ 533   4                                      //Indicates end of stored data bit
+ 534   4                                      g_uc_ax25_header_package_property |= AX25_HEADER_PROPERTY_END_OF_STORED_DATA_BIT;
+ 535   4      
+ 536   4                                      //In addition, ifthe STRNG_FLAG_SD_LOAD_COMPLETED flag is raised, then 
+ 537   4                                      if (g_uc_strsnd_flag & STRNG_FLAG_SD_LOAD_COMPLETED){
+ 538   5                                              //Switch the sending package property to end
+ 539   5                                              g_uc_ax25_header_package_property &= ~AX25_HEADER_PROPERTY_ON_GOING_END_TRANSMISSION_FILTER;
+ 540   5                                              g_uc_ax25_header_package_property |= AX25_HEADER_PROPERTY_END_OF_TRANSMISSION_BIT;
+ 541   5                                      }
+ 542   4                              }
+ 543   3              
+ 544   3                              //Fill the meaningful data to the AX25 buffer
+ 545   3                              //Update the SD card content index pointer for the next sending, it should be where the last time it st
+             -ops
+ 546   3                              //Ian (2012-05-15): the logic written should have confirmed that l_us_sd_card_content_index_p will not 
+             -exceed SD_CARD_BUFFER_SIZE
+ 547   3                              for (l_uc_counter = 0; l_uc_counter < l_uc_max_counter; l_uc_counter++)
+ 548   3                                      g_uc_ax25_message[g_uc_ax25_header_this_package_size++] = g_uc_sd_data_buffer[l_us_sd_card_content_ind
+             -ex_p++];
+ 549   3      
+ 550   3                              //Send the AX25 data in the buffer to the ground station
+ 551   3                      l_us_error_code = sendDataInAX25Frame();
+ 552   3              
+ 553   3                              //Reset stored and end data bits
+ 554   3                              g_uc_ax25_header_package_property &= ~AX25_HEADER_PROPERTY_START_END_STORED_FILTER;
+ 555   3                              
+ 556   3                              //If there is an error code in sending data, terminates this sending
+ 557   3                              if(l_us_error_code){
+ 558   4                                      g_uc_strsnd_flag &= ~SNDNG_FLAG_ON_GOING;
+ 559   4                                      g_uc_strsnd_flag &= ~SNDNG_FLAG_COMPLETED;
+ 560   4                                      g_uc_strsnd_flag &= ~STRNG_FLAG_SAVE_DATA_HOLD;
+ 561   4                                      return l_us_error_code;
+ 562   4                              }
+ 563   3      
+ 564   3                              //If the sending is ended and no more meaningful data size, ends it
+ 565   3                              if (!g_us_sd_card_meaningful_data_size){
+ 566   4                                      //Mark an end of sending
+ 567   4                                      g_uc_strsnd_flag &= ~SNDNG_FLAG_ON_GOING;
+ 568   4      
+ 569   4                                      //Mark that a sending is completed (to be used by a task outside of this function)
+ 570   4                                      g_uc_strsnd_flag |= SNDNG_FLAG_COMPLETED;
+ 571   4      
+ 572   4                                      //Release the hold for data saving
+ 573   4                                      g_uc_strsnd_flag &= ~STRNG_FLAG_SAVE_DATA_HOLD;
+ 574   4      
+ 575   4                                      //If loading is ended
+ 576   4                                      if (g_uc_strsnd_flag & STRNG_FLAG_SD_LOAD_COMPLETED)
+ 577   4                                              //Reset first time flag
+ 578   4                                              g_uc_ax25_header_package_property &= ~AX25_HEADER_PROPERTY_ON_GOING_STORED_DATA_BIT;                            
+ 579   4                              }
+ 580   3                              else
+ 581   3                                      //Reset g_uc_ax25_header_this_package_size to AX25_HEADER_SIZE (original size)
+C51 COMPILER V9.02   LUXP_SEND                                                             01/09/2014 12:21:21 PAGE 11  
+
+ 582   3                                      g_uc_ax25_header_this_package_size = AX25_HEADER_SIZE;
+ 583   3                      
+ 584   3                              //Increase no of this package for the next sending
+ 585   3                              g_uc_ax25_header_no_of_this_package++;
+ 586   3                      }
+ 587   2              
+ 588   2                      //If the data source is other temporary buffer
+ 589   2                      else{
+ 590   3                              //Set initial value for l_uc_initial_data_sent_counter as the same as g_uc_current_data_sent_counter
+ 591   3                              l_uc_initial_data_sent_counter = g_uc_current_data_sent_counter;
+ 592   3      
+ 593   3                          //Main loop to send every data type given
+ 594   3                              for (l_uc_counter = l_uc_initial_data_sent_counter; l_uc_counter < g_uc_no_of_data_sent; l_uc_counter++
+             -){
+ 595   4      
+ 596   4                              //Test case to calculate length of a set of data
+ 597   4                              l_us_current_data_set_length = fillData(g_uc_temporary_data_buffer,0,*(l_uc_data_type_sent_buffe
+             -r_p+l_uc_counter),0);
+ 598   4                              l_us_total_to_be_data_length = g_uc_ax25_header_this_package_size + l_us_current_data_set_length
+             -;
+ 599   4              
+ 600   4                                      //If the total to be data length is not within allowed length: MAX_AX25_CONTENT_SIZE + AX25_HEADER_SIZ
+             -E
+ 601   4                                      if (l_us_total_to_be_data_length > MAX_AX25_CONTENT_SIZE + AX25_HEADER_SIZE){
+ 602   5                                              //Send the AX25 data in the buffer to the ground station
+ 603   5                                  l_us_error_code = sendDataInAX25Frame();
+ 604   5                      
+ 605   5                                              //If there is an error code in sending data, terminates this sending
+ 606   5                                              if (l_us_error_code){
+ 607   6                                                      g_uc_strsnd_flag &= ~SNDNG_FLAG_ON_GOING;
+ 608   6                                                      g_uc_strsnd_flag &= ~SNDNG_FLAG_COMPLETED;
+ 609   6                                                      return l_us_error_code;
+ 610   6                                              }
+ 611   5              
+ 612   5                                              //Increase no of this package for the next sending
+ 613   5                                              g_uc_ax25_header_no_of_this_package++;
+ 614   5                      
+ 615   5                                              //Reset current package size to the original size = AX25_HEADER_SIZE
+ 616   5                                              g_uc_ax25_header_this_package_size = AX25_HEADER_SIZE;
+ 617   5                      
+ 618   5                                              //Fill AX25 message buffer with this current data set, update its array index pointer
+ 619   5                                  g_uc_ax25_header_this_package_size = fillData(g_uc_ax25_message,g_uc_ax25_header_this_packag
+             -e_size,*(l_uc_data_type_sent_buffer_p+l_uc_counter),1);
+ 620   5      
+ 621   5                                              //Increase current data sent counter
+ 622   5                                              g_uc_current_data_sent_counter++;
+ 623   5      
+ 624   5                                              //Set l_uc_break_when_sending as true
+ 625   5                                              l_uc_break_when_sending = 1;
+ 626   5              
+ 627   5                                              //Break from the for loop
+ 628   5                                              break;
+ 629   5                                      }
+ 630   4                                      else {//If the total to be data length is within the allowed length
+ 631   5                                              //Fill AX25 message buffer with this current data set, update its array index pointer
+ 632   5                                  g_uc_ax25_header_this_package_size = fillData(g_uc_ax25_message,g_uc_ax25_header_this_packag
+             -e_size,*(l_uc_data_type_sent_buffer_p+l_uc_counter),1);
+ 633   5      
+ 634   5                                              //Increase current data sent counter
+ 635   5                                              g_uc_current_data_sent_counter++;       
+ 636   5                                      }
+ 637   4                              }    
+C51 COMPILER V9.02   LUXP_SEND                                                             01/09/2014 12:21:21 PAGE 12  
+
+ 638   3              
+ 639   3                              //When the g_uc_current_data_sent_counter == g_uc_no_of_data_sent, 
+ 640   3                              //all data must have been sent to the ground station, except the last one in the AX25 message buffer
+ 641   3                              //If currently there is an on going transmission, don't enter this if. If not, enters it.
+ 642   3                              if (g_uc_current_data_sent_counter >= g_uc_no_of_data_sent && !l_uc_break_when_sending){
+ 643   4                                      //Update package property to be end data set now
+ 644   4                                      g_uc_ax25_header_package_property &= ~AX25_HEADER_PROPERTY_ON_GOING_END_TRANSMISSION_FILTER;
+ 645   4                                      g_uc_ax25_header_package_property |= AX25_HEADER_PROPERTY_END_OF_TRANSMISSION_BIT;
+ 646   4                              
+ 647   4                                      //Send the data stored in the SD card buffer to the Ground Station
+ 648   4                                  l_us_error_code = sendDataInAX25Frame();
+ 649   4      
+ 650   4                                      //If there is an error code in sending data, terminates this sending
+ 651   4                                      if(l_us_error_code){
+ 652   5                                              g_uc_strsnd_flag &= ~SNDNG_FLAG_ON_GOING;
+ 653   5                                              g_uc_strsnd_flag &= ~SNDNG_FLAG_COMPLETED;
+ 654   5                                              return l_us_error_code;
+ 655   5                                      }
+ 656   4      
+ 657   4                                      //Mark an end of sending
+ 658   4                                      g_uc_strsnd_flag &= ~SNDNG_FLAG_ON_GOING;
+ 659   4      
+ 660   4                                      //Mark that a sending is completed (to be used by a task outside of this function)
+ 661   4                                      g_uc_strsnd_flag |= SNDNG_FLAG_COMPLETED;
+ 662   4                              }
+ 663   3                      }       
+ 664   2              }
+ 665   1      
+ 666   1              return l_us_error_code;
+ 667   1      }
+ 668          
+ 669          //-----------------------------------------------------------------------------
+ 670          // To send data in the AX25 frame
+ 671          //-----------------------------------------------------------------------------
+ 672          // This function will send data in the AX25 frame and puts its header and CRC16
+ 673          //      bytes before sending
+ 674          //
+ 675          // These five informations are needed to be declared before this function is
+ 676          //      called (outside of this function):
+ 677          //      1) g_uc_ax25_header_subsystem
+ 678          //      2) g_uc_ax25_header_data_type
+ 679          //      3) g_uc_ax25_header_package_property
+ 680          //      4) g_uc_ax25_header_no_of_this_package
+ 681          //      5) g_uc_ax25_header_this_package_size
+ 682          //-----------------------------------------------------------------------------
+ 683          unsigned short sendDataInAX25Frame (void)
+ 684          {
+ 685   1              unsigned short l_us_error_code = EC_INIT;
+ 686   1              unsigned char *l_uc_array_p;
+ 687   1              unsigned char l_uc_data_counter = 0x00;
+ 688   1      
+ 689   1              //Initialize array pointer to point the AX.25 frame buffer
+ 690   1              l_uc_array_p = g_uc_ax25_message;
+ 691   1      
+ 692   1              //Only create proper header if this function is called using normal procedure 
+ 693   1              //(package recovery bit is not raised)
+ 694   1              if (!(g_uc_ax25_header_package_property & AX25_HEADER_PROPERTY_PACKAGE_RECOVERY_DATA_BIT)){
+ 695   2      
+ 696   2                      //------------------------------------------------------------------------------------
+ 697   2                      //Create header & checksum
+ 698   2                      //Write package data type information
+ 699   2                      *(l_uc_array_p + l_uc_data_counter++) = g_uc_ax25_header_subsystem;
+C51 COMPILER V9.02   LUXP_SEND                                                             01/09/2014 12:21:21 PAGE 13  
+
+ 700   2                      *(l_uc_array_p + l_uc_data_counter++) = g_uc_ax25_header_data_type;
+ 701   2                      
+ 702   2                      //Write package property, filter SD card and first-time property
+ 703   2                      *(l_uc_array_p + l_uc_data_counter++) = g_uc_ax25_header_package_property & AX25_HEADER_PROPERTY_SENDING
+             -_FILTER;
+ 704   2                      
+ 705   2                      //Write no of this package
+ 706   2                      *(l_uc_array_p + l_uc_data_counter++) = g_uc_ax25_header_no_of_this_package;
+ 707   2                      
+ 708   2                      //Write this package size
+ 709   2                      *(l_uc_array_p + l_uc_data_counter++) = g_uc_ax25_header_this_package_size;
+ 710   2                      //------------------------------------------------------------------------------------
+ 711   2                      
+ 712   2                      #if (STORING_ENABLE == 1)
+ 713   2                      //------------------------------------------------------------------------------------
+ 714   2                      //If the source of this sending is SD card, save it first (for package lost recovery purpose)
+ 715   2                      if (g_uc_ax25_header_package_property & AX25_HEADER_PROPERTY_STORED_DATA_BIT){
+ 716   3                              //Release the save data hold
+ 717   3                              g_uc_strsnd_flag &= ~STRNG_FLAG_SAVE_DATA_HOLD;
+ 718   3      
+ 719   3                              //Save the data sent
+ 720   3                              saveDataProtected(ALL_SUBSYSTEMS,SD_RECOVERY_PACKAGE,g_uc_temporary_data_buffer);
+ 721   3      
+ 722   3                              //Hold save data again
+ 723   3                              g_uc_strsnd_flag |= STRNG_FLAG_SAVE_DATA_HOLD;
+ 724   3                      }
+ 725   2                      //------------------------------------------------------------------------------------
+ 726   2                      #endif
+ 727   2      
+ 728   2              //Else, if this is special sending (lost frame recovery) case, just send the data directly. 
+ 729   2              }
+ 730   1      
+ 731   1              #if (CRC_ENABLE == 1)
+ 732   1              //Warning: g_uc_ax25_header_this_package_size must have been specifed correctly outside of this function
+ 733   1              //------------------------------------------------------------------------------------
+ 734   1              //Add checksum bytes
+ 735   1              if (CHECKSUM_DEFAULT & 0x40)    //If checksum default method is 16-bit
+ 736   1                      insertCRC16(l_uc_array_p,g_uc_ax25_header_this_package_size);
+ 737   1              //------------------------------------------------------------------------------------
+ 738   1              #endif
+ 739   1      
+ 740   1              //------------------------------------------------------------------------------------
+ 741   1              //Send AX25 package
+ 742   1              l_us_error_code = isisI2CMsg (ITC_I2C_SND_AX_FR_DFLT,0,g_uc_ax25_header_this_package_size+2,0);
+ 743   1              //------------------------------------------------------------------------------------
+ 744   1      
+ 745   1              //------------------------------------------------------------------------------------
+ 746   1              //Record the no of data bytes sent
+ 747   1              if (!l_us_error_code) str_obdh_hk.ul_data_byte_sent += (g_uc_ax25_header_this_package_size+2);
+ 748   1              //------------------------------------------------------------------------------------
+ 749   1              
+ 750   1              return l_us_error_code;
+ 751   1      }
+ 752          #endif
+ 753          
+ 754          #if (GROUND_STATION_COMMAND_HANDLER_ENABLE == 1)
+ 755          //-----------------------------------------------------------------------------
+ 756          // Common pattern to send ACK message only (by GSCH)
+ 757          //-----------------------------------------------------------------------------
+ 758          void sendAckMsg (void)
+ 759          {
+ 760   1              unsigned short l_us_init_send_error_code = EC_INIT;
+C51 COMPILER V9.02   LUXP_SEND                                                             01/09/2014 12:21:21 PAGE 14  
+
+ 761   1      
+ 762   1              //Indicates taking data from temporary buffer
+ 763   1              g_uc_ax25_header_package_property = 0x00;
+ 764   1      
+ 765   1              //Initialize sending data under free category
+ 766   1              g_uc_ax25_header_subsystem = OBDH_SUBSYSTEM;
+ 767   1              g_uc_ax25_header_data_type = SD_FREE_CATEGORY;
+ 768   1      
+ 769   1              //Initialize no of data sent
+ 770   1              g_uc_no_of_data_sent = 1;
+ 771   1      
+ 772   1              //Fill with ACK MSG
+ 773   1              g_uc_data_type_sent_buffer[0] = DATA_CAT_ACK_MSG;
+ 774   1      
+ 775   1              //Initialized sending data (once only)
+ 776   1              l_us_init_send_error_code = initSendData();
+ 777   1      
+ 778   1              //If there is unaccepted initialization error, do not proceed (re-take new command)
+ 779   1              //Else, proceeds to GSCH_STATE_SEND_REAL_TIME_DATA state
+ 780   1              if(!l_us_init_send_error_code || l_us_init_send_error_code == EC_INVALID_SENDING_DATA_REQUEST)
+ 781   1                      //Send real-time data
+ 782   1                      groundEnterSendRealTime();                                                                      
+ 783   1      }
+ 784          
+ 785          //-----------------------------------------------------------------------------
+ 786          // Common pattern to send data from OBDH temporary buffer (by GSCH)
+ 787          //-----------------------------------------------------------------------------
+ 788          void sendCommonData (unsigned char l_uc_common_data)
+ 789          {
+ 790   1              unsigned short l_us_init_send_error_code = EC_INIT;
+ 791   1      
+ 792   1              //Always successful
+ 793   1              g_us_gsch_error_code = EC_SUCCESSFUL;
+ 794   1      
+ 795   1              //Indicates taking data from temporary buffer
+ 796   1              g_uc_ax25_header_package_property = 0x00;
+ 797   1      
+ 798   1              //Taking the data initialization from the command argument
+ 799   1              g_uc_ax25_header_subsystem = OBDH_SUBSYSTEM;
+ 800   1              g_uc_ax25_header_data_type = l_uc_common_data;
+ 801   1      
+ 802   1              //Initialized sending data (once only)
+ 803   1              l_us_init_send_error_code = initSendData();
+ 804   1      
+ 805   1              //If there is unaccepted initialization error, do not proceed (re-take new command)
+ 806   1              //Else, proceeds to GSCH_STATE_SEND_REAL_TIME_DATA state
+ 807   1              if(!l_us_init_send_error_code || l_us_init_send_error_code == EC_INVALID_SENDING_DATA_REQUEST)
+ 808   1                      //Send real-time data
+ 809   1                      groundEnterSendRealTime();                                                                      
+ 810   1      }
+ 811          
+ 812          //-----------------------------------------------------------------------------
+ 813          // Common pattern to send ket for Groundpass request (by GSCH)
+ 814          //-----------------------------------------------------------------------------
+ 815          void sendKeyRequest (void){
+ 816   1              unsigned short l_us_init_send_error_code = EC_INIT;
+ 817   1      
+ 818   1              //Always successful
+ 819   1              g_us_gsch_error_code = EC_SUCCESSFUL;
+ 820   1      
+ 821   1              //Indicates taking data from temporary buffer
+ 822   1              g_uc_ax25_header_package_property = 0x00;
+C51 COMPILER V9.02   LUXP_SEND                                                             01/09/2014 12:21:21 PAGE 15  
+
+ 823   1      
+ 824   1              //Taking the data initialization from the command argument
+ 825   1              g_uc_ax25_header_subsystem = OBDH_SUBSYSTEM;
+ 826   1              g_uc_ax25_header_data_type = SD_GP_REQUEST_KEY;
+ 827   1      
+ 828   1              //Initialized sending data (once only)
+ 829   1              l_us_init_send_error_code = initSendData();
+ 830   1      
+ 831   1              //If there is unaccepted initialization error, do not proceed (re-take new command)
+ 832   1              //Else, proceeds to send the data
+ 833   1              if(!l_us_init_send_error_code || l_us_init_send_error_code == EC_INVALID_SENDING_DATA_REQUEST)
+ 834   1                      //Start sending request
+ 835   1                      groundStartSendRequest();
+ 836   1      }
+ 837          #endif
+ 838          #endif
+ 839          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2417    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =      2      39
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

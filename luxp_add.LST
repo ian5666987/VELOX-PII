@@ -1,0 +1,1546 @@
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 1   
+
+
+C51 COMPILER V9.02, COMPILATION OF MODULE LUXP_ADD
+NO OBJECT MODULE REQUESTED
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE luxp_add.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+*** WARNING C500 IN LINE 1 OF LUXP_ADD.C: LICENSE ERROR (R20D: CONTENT ERROR IN FLF FILE)
+
+   1          //------------------------------------------------------------------------------------
+   2          // Luxp_add.c
+   3          //------------------------------------------------------------------------------------
+   4          // Copyright (C) 2013 Nanyang Technological University.
+   5          //
+   6          // AUTH: IAN
+   7          // DATE: 03 APR 2013
+   8          //
+   9          // The program Luxp_add.c will be downloaded to the Pumpkin Motherboard with 
+  10          // C8051F120 uC as part of the VELOX-P Pico-Satellite Flight Software. 
+  11          //
+  12          // There are six main type of functions contained in this file, namely:
+  13          // 1) Bytes manipulation
+  14          // 2) Clear functions
+  15          // 3) Reset functions
+  16          // 4) Insertion functions
+  17          // 5) Fill data functions
+  18          //
+  19          //------------------------------------------------------------------------------------
+  20          // Overall functional test status
+  21          //------------------------------------------------------------------------------------
+  22          // Partially tested, all fully functional
+  23          //
+  24          //------------------------------------------------------------------------------------
+  25          // Overall documentation status
+  26          //------------------------------------------------------------------------------------
+  27          // Minimally documented
+  28          //------------------------------------------------------------------------------------
+  29          
+  30          //------------------------------------------------------------------------------------
+  31          // List of functions                            | Test status                                   | Documentation
+  32          //------------------------------------------------------------------------------------
+  33          //
+  34          //------------------------------------------------------------------------------------
+  35          
+  36          #include <luxp_add.h>
+  37          
+  38          //------------------------------------------------------------------------------------
+  39          // Convert two shorts into long integer
+  40          //------------------------------------------------------------------------------------
+  41          // Function's test result: fully functional
+  42          //------------------------------------------------------------------------------------
+  43          unsigned long ushort2ulong (unsigned short l_us_high_short, unsigned short l_us_low_short)
+  44          {
+  45   1              unsigned long l_ul_long_int = 0x00000000;
+  46   1      
+  47   1              l_ul_long_int = l_us_high_short;
+  48   1              l_ul_long_int = l_ul_long_int << 16;
+  49   1              l_ul_long_int += l_us_low_short;
+  50   1      
+  51   1              return l_ul_long_int;
+  52   1      }
+  53          
+  54          //------------------------------------------------------------------------------------
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 2   
+
+  55          // Convert four chars into a long integer
+  56          //------------------------------------------------------------------------------------
+  57          // Function's test result: fully functional
+  58          //------------------------------------------------------------------------------------
+  59          unsigned long uchar2ulong (unsigned char l_uc_hh_byte, unsigned char l_uc_hl_byte, unsigned char l_uc_lh_b
+             -yte, unsigned char l_uc_ll_byte)
+  60          {
+  61   1              unsigned long l_ul_long_int = 0x00000000;
+  62   1              unsigned short l_us_low_short = 0x0000;
+  63   1              unsigned short l_us_high_short = 0x0000;
+  64   1      
+  65   1              l_us_low_short = ((unsigned short)(l_uc_lh_byte << 8) + l_uc_ll_byte);
+  66   1              l_us_high_short = ((unsigned short)(l_uc_hh_byte << 8) + l_uc_hl_byte);
+  67   1              l_ul_long_int = ushort2ulong(l_us_high_short,l_us_low_short);
+  68   1      
+  69   1              return l_ul_long_int;
+  70   1      }
+  71          
+  72          //------------------------------------------------------------------------------------
+  73          // Convert four characters to float
+  74          //------------------------------------------------------------------------------------
+  75          // Function's test result: fully functional
+  76          //------------------------------------------------------------------------------------
+  77          float uchar2float (unsigned char l_uc_hh_byte, unsigned char l_uc_hl_byte, unsigned char l_uc_lh_byte, uns
+             -igned char l_uc_ll_byte)
+  78          {
+  79   1              float l_f_float;
+  80   1              (long)l_f_float = (long)uchar2ulong(l_uc_hh_byte,l_uc_hl_byte,l_uc_lh_byte,l_uc_ll_byte);
+  81   1              return l_f_float;
+  82   1      }
+  83          
+  84          //------------------------------------------------------------------------------------
+  85          // Convert a float to low low char
+  86          //------------------------------------------------------------------------------------
+  87          // Function's test result: fully functional
+  88          //------------------------------------------------------------------------------------
+  89          unsigned char float2ullchar (float l_f_float)
+  90          {
+  91   1              unsigned char *l_uc_float_p;
+  92   1              l_uc_float_p = &l_f_float;
+*** WARNING C182 IN LINE 92 OF LUXP_ADD.C: pointer to different objects
+  93   1              return *(l_uc_float_p + 3);
+  94   1      }
+  95          
+  96          //------------------------------------------------------------------------------------
+  97          // Convert a float to low high char
+  98          //------------------------------------------------------------------------------------
+  99          // Function's test result: fully functional
+ 100          //------------------------------------------------------------------------------------
+ 101          unsigned char float2ulhchar (float l_f_float)
+ 102          {
+ 103   1              unsigned char *l_uc_float_p;
+ 104   1              l_uc_float_p = &l_f_float;
+*** WARNING C182 IN LINE 104 OF LUXP_ADD.C: pointer to different objects
+ 105   1              return *(l_uc_float_p + 2);
+ 106   1      }
+ 107          
+ 108          //------------------------------------------------------------------------------------
+ 109          // Convert a float to high low char
+ 110          //------------------------------------------------------------------------------------
+ 111          // Function's test result: fully functional
+ 112          //------------------------------------------------------------------------------------
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 3   
+
+ 113          unsigned char float2uhlchar (float l_f_float)
+ 114          {
+ 115   1              unsigned char *l_uc_float_p;
+ 116   1              l_uc_float_p = &l_f_float;
+*** WARNING C182 IN LINE 116 OF LUXP_ADD.C: pointer to different objects
+ 117   1              return *(l_uc_float_p + 1);
+ 118   1      }
+ 119          
+ 120          //------------------------------------------------------------------------------------
+ 121          // Convert a float to high high char
+ 122          //------------------------------------------------------------------------------------
+ 123          // Function's test result: fully functional
+ 124          //------------------------------------------------------------------------------------
+ 125          unsigned char float2uhhchar (float l_f_float)
+ 126          {
+ 127   1              unsigned char *l_uc_float_p;
+ 128   1              l_uc_float_p = &l_f_float;
+*** WARNING C182 IN LINE 128 OF LUXP_ADD.C: pointer to different objects
+ 129   1              return *l_uc_float_p;
+ 130   1      }
+ 131          
+ 132          #if (TIME_ENABLE == 1)
+ 133          //------------------------------------------------------------------------------------
+ 134          // To change two 0-9 decimal numbers in one byte character to its proper one byte 
+ 135          // hexadecimal character
+ 136          //------------------------------------------------------------------------------------
+ 137          // Function's test result: fully functional
+ 138          //------------------------------------------------------------------------------------
+ 139          // Ian (2012-05-15): This function is used to standardize real-time clock (RTC) chip, 
+ 140          //                   an embedded chip to the on board computer, data format with the 
+ 141          //                   rests of the data in the on board computer. Because the data
+ 142          //                                       format sent from the RTC is in hexadecimal, though it represents
+ 143          //                                       decimal value. 
+ 144          //
+ 145          //                                       Ex: 
+ 146          //                                       (1) Day data byte sent = 0x23 (true dec value = 35, but RTC 
+ 147          //                                       actually says dec value 23 - or day 23 of the month).
+ 148          //
+ 149          //                                       The function oneHex2twoDec does the reverse of this function.
+ 150          unsigned char twoDec2oneHex (unsigned char l_uc_two_dec_no)
+ 151          {
+ 152   1              unsigned char l_uc_one_hex_no;
+ 153   1              unsigned char l_uc_h_dec_no;
+ 154   1              unsigned char l_uc_l_dec_no;
+ 155   1      
+ 156   1              l_uc_h_dec_no = l_uc_two_dec_no & 0xF0;
+ 157   1              l_uc_h_dec_no = l_uc_h_dec_no >> 4;
+ 158   1              l_uc_h_dec_no = l_uc_h_dec_no & 0x0F;
+ 159   1              l_uc_h_dec_no = l_uc_h_dec_no * 10;
+ 160   1      
+ 161   1              l_uc_l_dec_no = l_uc_two_dec_no & 0x0F;
+ 162   1      
+ 163   1              l_uc_one_hex_no = l_uc_h_dec_no + l_uc_l_dec_no;
+ 164   1              
+ 165   1              return l_uc_one_hex_no; 
+ 166   1      }
+ 167          #endif
+ 168          
+ 169          #if (RTC_CMD_ENABLE == 1)
+ 170          //------------------------------------------------------------------------------------
+ 171          // To change one hexadecimal character in one byte to its two 0-9 decimal numbers in 
+ 172          // one byte character
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 4   
+
+ 173          //------------------------------------------------------------------------------------
+ 174          // Function's test result: fully functional
+ 175          //------------------------------------------------------------------------------------
+ 176          unsigned char oneHex2twoDec (unsigned char l_uc_one_hex_no)
+ 177          {
+ 178   1              unsigned char l_uc_two_dec_no;
+ 179   1              unsigned char l_uc_h_dec_no;
+ 180   1              unsigned char l_uc_l_dec_no;
+ 181   1              unsigned char l_uc_temp_dec_no;
+ 182   1      
+ 183   1              l_uc_h_dec_no = l_uc_one_hex_no/10;
+ 184   1              l_uc_h_dec_no = l_uc_h_dec_no & 0x0F;
+ 185   1              l_uc_h_dec_no = l_uc_h_dec_no << 4;
+ 186   1              l_uc_h_dec_no = l_uc_h_dec_no & 0xF0;
+ 187   1      
+ 188   1              l_uc_temp_dec_no = l_uc_h_dec_no >> 4;
+ 189   1              l_uc_temp_dec_no = l_uc_temp_dec_no & 0x0F;
+ 190   1              l_uc_temp_dec_no = l_uc_temp_dec_no * 10;
+ 191   1              l_uc_l_dec_no = l_uc_one_hex_no - l_uc_temp_dec_no;
+ 192   1      
+ 193   1              l_uc_two_dec_no = l_uc_h_dec_no + l_uc_l_dec_no;
+ 194   1      
+ 195   1              return l_uc_two_dec_no;
+ 196   1      }
+ 197          #endif
+ 198          
+ 199          //------------------------------------------------------------------------------------
+ 200          // To clear UARTBuffer
+ 201          //------------------------------------------------------------------------------------
+ 202          // Function's test result: fully functional
+ 203          //------------------------------------------------------------------------------------
+ 204          void clearUARTBuffer (void)
+ 205          {
+ 206   1              int i;
+ 207   1              for (i = 0; i < UART_BUFFER_SIZE; i++) g_uc_uart_buffer[i] = '\0';
+ 208   1      }
+ 209          
+ 210          //------------------------------------------------------------------------------------
+ 211          // To clear call task buffer
+ 212          //------------------------------------------------------------------------------------
+ 213          // Function's test result: fully functional
+ 214          //------------------------------------------------------------------------------------
+ 215          void clearCallTaskBuffer (void)
+ 216          {
+ 217   1              int i;
+ 218   1              for (i = 0; i < CALL_TASK_BUFFER_SIZE; i++) g_uc_call_task_buffer[i] = '\0';
+ 219   1      }
+ 220          
+ 221          //------------------------------------------------------------------------------------
+ 222          // To reset I2C Communication
+ 223          //------------------------------------------------------------------------------------
+ 224          // Function's test result: untested
+ 225          //------------------------------------------------------------------------------------
+ 226          void resetI2CCommunication (void)
+ 227          {
+ 228   1              char SFRPAGE_SAVE = SFRPAGE;                    
+ 229   1              SFRPAGE = SMB0_PAGE;
+ 230   1              
+ 231   1              SMB0CN &= ~0x40;                 // Reset communication
+ 232   1              SMB0CN |= 0x40;
+ 233   1              STA = 0;
+ 234   1              STO = 0;
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 5   
+
+ 235   1              AA = 0;
+ 236   1              g_us_i2c_flag &= ~I2C_FLAG_BUSY;                                //Free SMBus line               
+ 237   1      
+ 238   1              SFRPAGE = SFRPAGE_SAVE;             
+ 239   1      }
+ 240          
+ 241          #if (TASK_ENABLE == 1)
+ 242          //------------------------------------------------------------------------------------
+ 243          // To reset a satellite's task
+ 244          //------------------------------------------------------------------------------------
+ 245          void resetTask (unsigned char l_uc_task)
+ 246          {
+ 247   1              //Scriptspace is not reset due to possible user setting to set a task to different
+ 248   1              //scriptspace. Yet, user setting is not implemented for VELOX-P
+ 249   1              str_task[l_uc_task].uc_status                                                           = 0x00; 
+ 250   1              str_task[l_uc_task].uc_script_running_flags                             = 0x01;
+ 251   1              str_task[l_uc_task].uc_script_error_flags                                       = 0x00;
+ 252   1              str_task[l_uc_task].uc_script_completed_flags                           = 0x00;
+ 253   1              str_task[l_uc_task].uc_script_timer_owning_flags                        = 0x00;
+ 254   1              str_task[l_uc_task].uc_script_timer_running_flags                       = 0x00;
+ 255   1              str_task[l_uc_task].uc_script_retry_counter_owning_flags        = 0x00;
+ 256   1      
+ 257   1              //Ian (2012-05-15): It is noted that debugging feature is not removed here.
+ 258   1              #if (DEBUGGING_FEATURE == 1)
+ 259   1              str_task[l_uc_task].uc_status_held                                                      = 0x00; //uc_status_held cleared
+ 260   1              #endif
+ 261   1      }
+ 262          #endif
+ 263          
+ 264          #if (SATELLITE_MODE_HANDLER_ENABLE == 1)
+ 265          #if (BODY_RATE_HANDLER_ENABLE == 1)
+ 266          #if (ADCS_CMD_ENABLE == 1)
+ 267          #if (PWRS_CMD_ENABLE == 1)
+ 268          //------------------------------------------------------------------------------------
+ 269          // To reset body rate values to high
+ 270          //------------------------------------------------------------------------------------
+ 271          // Function's test result: tested
+ 272          //------------------------------------------------------------------------------------
+ 273          // Ian (2012-05-15): The initial rate vector is expected to be high.
+ 274          //                                       Since BRH_FLAG_BR_HI can only be set high if the initial rate
+ 275          //                                       vector is high, so the initial vector is also to be set as high.
+ 276          void resetBodyRateValue (void)
+ 277          {
+ 278   1              unsigned char l_uc_i;
+ 279   1              unsigned char l_uc_j;
+ 280   1      
+ 281   1              for (l_uc_i = 0; l_uc_i < 3; l_uc_i++){
+ 282   2                      str_obdh_data.us_br_eci_avg[l_uc_i] = INITIAL_BR_VALUE;
+ 283   2                      for (l_uc_j = 0; l_uc_j < BR_ECI_SAMPLE_NO; l_uc_j++)
+ 284   2                              g_s_br_eci[l_uc_i][l_uc_j] = INITIAL_BR_VALUE;
+ 285   2              }
+ 286   1      
+ 287   1              str_obdh_hk.us_brh_flag |= BRH_FLAG_BR_HI;
+ 288   1      }
+ 289          #endif
+ 290          #endif
+ 291          #endif
+ 292          #endif
+ 293          
+ 294          //------------------------------------------------------------------------------------
+ 295          // Insert float to an array
+ 296          //------------------------------------------------------------------------------------
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 6   
+
+ 297          // Function's test result: tested
+ 298          //------------------------------------------------------------------------------------
+ 299          unsigned short insertFloatToArray (float l_f_to_insert, unsigned char *l_uc_array_p, unsigned short l_us_s
+             -tarting_counter)
+ 300          {
+ 301   1              *(l_uc_array_p + l_us_starting_counter)         = float2uhhchar(l_f_to_insert);
+ 302   1              *(l_uc_array_p + l_us_starting_counter + 1) = float2uhlchar(l_f_to_insert);
+ 303   1              *(l_uc_array_p + l_us_starting_counter + 2) = float2ulhchar(l_f_to_insert);
+ 304   1              *(l_uc_array_p + l_us_starting_counter + 3) = float2ullchar(l_f_to_insert);
+ 305   1      
+ 306   1              return l_us_starting_counter+4;
+ 307   1      }
+ 308          
+ 309          //------------------------------------------------------------------------------------
+ 310          // Insert long to an array
+ 311          //------------------------------------------------------------------------------------
+ 312          // Function's test result: tested
+ 313          //------------------------------------------------------------------------------------
+ 314          unsigned short insertLongToArray (unsigned long l_ul_to_insert, unsigned char *l_uc_array_p, unsigned shor
+             -t l_us_starting_counter)
+ 315          {
+ 316   1              *(l_uc_array_p + l_us_starting_counter)         = l_ul_to_insert >> 24;
+ 317   1              *(l_uc_array_p + l_us_starting_counter + 1) = l_ul_to_insert >> 16;
+ 318   1              *(l_uc_array_p + l_us_starting_counter + 2) = l_ul_to_insert >> 8;
+ 319   1              *(l_uc_array_p + l_us_starting_counter + 3) = l_ul_to_insert;
+ 320   1      
+ 321   1              return l_us_starting_counter+4;
+ 322   1      }
+ 323          
+ 324          //------------------------------------------------------------------------------------
+ 325          // Insert short to an array
+ 326          //------------------------------------------------------------------------------------
+ 327          // Function's test result: tested
+ 328          //------------------------------------------------------------------------------------
+ 329          unsigned short insertShortToArray (unsigned short l_us_to_insert, unsigned char *l_uc_array_p, unsigned sh
+             -ort l_us_starting_counter)
+ 330          {
+ 331   1              *(l_uc_array_p + l_us_starting_counter)         = l_us_to_insert >> 8;
+ 332   1              *(l_uc_array_p + l_us_starting_counter + 1) = l_us_to_insert;
+ 333   1      
+ 334   1              return l_us_starting_counter+2;
+ 335   1      }
+ 336          
+ 337          //------------------------------------------------------------------------------------
+ 338          // Insert an array to a float using global counter
+ 339          //------------------------------------------------------------------------------------
+ 340          // Function's test result: tested
+ 341          //------------------------------------------------------------------------------------
+ 342          float insertArrayToFloatGC (unsigned char *l_uc_array_p)
+ 343          {
+ 344   1              float l_f_result;
+ 345   1      
+ 346   1              l_f_result = uchar2float(*(l_uc_array_p+g_us_data_counter),*(l_uc_array_p+g_us_data_counter+1),*(l_uc_arr
+             -ay_p+g_us_data_counter+2),*(l_uc_array_p+g_us_data_counter+3));
+ 347   1              g_us_data_counter += 4;
+ 348   1      
+ 349   1              return l_f_result;
+ 350   1      }
+ 351          
+ 352          //------------------------------------------------------------------------------------
+ 353          // Insert an array to a long using global counter
+ 354          //------------------------------------------------------------------------------------
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 7   
+
+ 355          // Function's test result: tested
+ 356          //------------------------------------------------------------------------------------
+ 357          unsigned long insertArrayToLongGC (unsigned char *l_uc_array_p)
+ 358          {
+ 359   1              unsigned long l_ul_result;
+ 360   1      
+ 361   1              l_ul_result = uchar2ulong (*(l_uc_array_p+g_us_data_counter),*(l_uc_array_p+g_us_data_counter+1),*(l_uc_a
+             -rray_p+g_us_data_counter+2),*(l_uc_array_p+g_us_data_counter+3));
+ 362   1              g_us_data_counter += 4;
+ 363   1      
+ 364   1              return l_ul_result;
+ 365   1      }
+ 366          
+ 367          //------------------------------------------------------------------------------------
+ 368          // Insert an array to a short using global counter
+ 369          //------------------------------------------------------------------------------------
+ 370          // Function's test result: tested
+ 371          //------------------------------------------------------------------------------------
+ 372          unsigned short insertArrayToShortGC (unsigned char *l_uc_array_p)
+ 373          {
+ 374   1              unsigned short l_us_result;
+ 375   1      
+ 376   1              l_us_result = ((unsigned short)(*(l_uc_array_p+g_us_data_counter) << 8) + *(l_uc_array_p+g_us_data_counte
+             -r+1));
+ 377   1              g_us_data_counter += 2;
+ 378   1      
+ 379   1              return l_us_result;
+ 380   1      }
+ 381          
+ 382          #if (GROUND_STATION_COMMAND_HANDLER_ENABLE == 1)
+ 383          #if (ISIS_CMD_ENABLE == 1)
+ 384          //------------------------------------------------------------------------------------
+ 385          // Insert GDSN command to GSCH variables and return its validity
+ 386          //------------------------------------------------------------------------------------
+ 387          // Function's test result: untested
+ 388          //------------------------------------------------------------------------------------
+ 389          void insertGDSNCommandToGSCHVar (void)
+ 390          {
+ 391   1              unsigned short l_us_i;
+ 392   1              unsigned short l_us_comm_error_code;
+ 393   1              #if (CRC_ENABLE == 1)
+ 394   1              unsigned short l_us_crc16_matching_result;
+ 395   1              #endif
+ 396   1              
+ 397   1              //Get AX.25 frame from COMM board
+ 398   1              l_us_comm_error_code = isisI2C(IMC_ADDR,IMC_I2C_GET_FR,0);                      
+ 399   1      
+ 400   1              //Only check command validity if there is no error code so far
+ 401   1              if(!l_us_comm_error_code){
+ 402   2                      //Assume command to be invalid first
+ 403   2                      g_us_gsch_command_validation_error_code = EC_INVALID_GDSN_COMMAND; 
+ 404   2                      
+ 405   2                      //Read the command (in the whole frame)
+ 406   2                      g_uc_gsch_gs_header     = g_uc_i2c_data_in[1];
+ 407   2                      g_uc_gsch_gs_cmd_header = g_uc_i2c_data_in[2];
+ 408   2                      g_uc_gsch_gs_cmd_tail   = g_uc_i2c_data_in[3];
+ 409   2                      g_uc_gsch_gs_arg_len    = g_uc_i2c_data_in[4];
+ 410   2                      for (l_us_i = 5; l_us_i < 5+MAX_GSCH_CMD_ARG_LEN ; l_us_i++)
+ 411   2                              g_uc_gsch_gs_arg[l_us_i-5] = g_uc_i2c_data_in[l_us_i];
+ 412   2              
+ 413   2                      //CRC16 record, the CRC bytes are always in the last two bytes of the commands
+ 414   2                      g_us_gsch_gs_cmd_crc = (unsigned short)(g_uc_i2c_data_in[COMMAND_LENGTH-1] << 8) + g_uc_i2c_data_in[COMM
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 8   
+
+             -AND_LENGTH];
+ 415   2              
+ 416   2                      //Remove frame as it has been obtained
+ 417   2                      l_us_comm_error_code = isisI2C(IMC_ADDR,IMC_I2C_RMV_FR,0);
+ 418   2      
+ 419   2                      //Only check command validity if there is no error code so far
+ 420   2                      if(!l_us_comm_error_code){
+ 421   3                              //Check validity of the command for different GSCH states
+ 422   3                              if (str_obdh_hk.uc_gsch_state == GSCH_STATE_IDLE){
+ 423   4                                      //Check the command's validity first
+ 424   4                                      //The only valid command in this mode is GDSN_REQUEST_GDPASS
+ 425   4                                      //The only valid header in this mode is GDSN ADDR
+ 426   4                                      if (g_uc_gsch_gs_header == GDSN_ADDR && g_uc_gsch_gs_cmd_header == GDSN_ADDR && g_uc_gsch_gs_cmd_tail 
+             -== GDSN_REQUEST_GDPASS)
+ 427   4                                              g_us_gsch_command_validation_error_code = EC_SUCCESSFUL;
+ 428   4                                      else g_us_gsch_command_validation_error_code = EC_INVALID_GDSN_COMMAND_IDLE_STATE;
+ 429   4                              }
+ 430   3                              else if (str_obdh_hk.uc_gsch_state == GSCH_STATE_WAITING_FOR_KEY_REPLY){
+ 431   4                                      //Check the command's validity first
+ 432   4                                      //The only valid header in this mode is GDSN ADDR
+ 433   4                                      if (g_uc_gsch_gs_header == GDSN_ADDR && g_uc_gsch_gs_cmd_header == GDSN_ADDR)
+ 434   4                                              g_us_gsch_command_validation_error_code = EC_SUCCESSFUL;
+ 435   4                                      else g_us_gsch_command_validation_error_code = EC_INVALID_GDSN_COMMAND_WAITING_FOR_KEY_REPLY_STATE;
+ 436   4                              }
+ 437   3                              else if (str_obdh_hk.uc_gsch_state == GSCH_STATE_GROUND_PASS){
+ 438   4                                      //Check the command's validity first
+ 439   4                                      if (g_uc_gsch_gs_cmd_tail == GDSN_REQUEST_GDPASS || g_uc_gsch_gs_cmd_tail == GDSN_SEND_GDPASS_CODE)
+ 440   4                                              g_us_gsch_command_validation_error_code = EC_INVALID_GDSN_COMMAND_GROUND_PASS_STATE;
+ 441   4                                      else if (str_obdh_hk.uc_sat_mode < SATELLITE_MODE_M5 && (g_uc_gsch_gs_cmd_tail == GDSN_LOG_DATA || g_u
+             -c_gsch_gs_cmd_tail == GDSN_GET_DATA_SPEC || g_uc_gsch_gs_cmd_tail == GDSN_SCHEDULE_SUN_TRACKING || g_uc_gsch_gs_cmd_tail
+             - == GDSN_UPLOAD_TCMD_A || g_uc_gsch_gs_cmd_tail == GDSN_UPLOAD_TCMD_B || g_uc_gsch_gs_cmd_tail == GDSN_SCHEDULE_MISSION_
+             -MODE))
+ 442   4                                              g_us_gsch_command_validation_error_code = EC_INVALID_GDSN_COMMAND_ON_LEOP;
+ 443   4                                      else g_us_gsch_command_validation_error_code = EC_SUCCESSFUL;
+ 444   4                              }
+ 445   3      
+ 446   3                              //If the command is valid so far, check its length
+ 447   3                              if (!g_us_gsch_command_validation_error_code)
+ 448   3                                      if (g_uc_gsch_gs_arg_len > MAX_GSCH_CMD_ARG_LEN)
+ 449   3                                              g_us_gsch_command_validation_error_code = EC_INVALID_GDSN_COMMAND_ARG_LENGTH;
+ 450   3                      
+ 451   3                              #if (CRC_ENABLE == 1)
+ 452   3                              //If the command is valid so far
+ 453   3                              if (!g_us_gsch_command_validation_error_code){
+ 454   4                                      //Double check the command with CRC16 matching, the CRC bytes are always in the last two bytes
+ 455   4                                      l_us_crc16_matching_result = checkCRC16Match(&g_uc_i2c_data_in[1],COMMAND_LENGTH-2);
+ 456   4                      
+ 457   4                                      //If the CRC16 bytes show that the command is indeed valid, then we can process the command, 
+ 458   4                                      //else consider the command invalid
+ 459   4                                      if (l_us_crc16_matching_result) //If CRC matching result is not zero, there is something fishy about t
+             -he command...
+ 460   4                                              g_us_gsch_command_validation_error_code = EC_INVALID_GDSN_COMMAND_CRC_BYTES_DO_NOT_MATCH;
+ 461   4                              }
+ 462   3                              #endif
+ 463   3                      }
+ 464   2              }
+ 465   1      }
+ 466          #endif
+ 467          #endif
+ 468          
+ 469          #if (CQUEUE_ENABLE == 1)
+              //------------------------------------------------------------------------------------
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 9   
+
+              // Insert GSCH command to command queue
+              //------------------------------------------------------------------------------------
+              // Function's test result: untested
+              //------------------------------------------------------------------------------------
+              void insertGSCHCommandToQueue (void)
+              {
+                      #if (GROUND_STATION_COMMAND_HANDLER_ENABLE == 1)
+              
+                      unsigned short l_us_i;
+              
+                      //Pass the command to the command executed register (overwrite whatever currently in the register)
+                      //By right, there cannot be any unexecuted command (in the command register) at this point
+                      //The only possibility whereby there is any command in the execution register here is if 
+                      //the str_obdh_par.uc_cq_execution_hold_activation is activated
+                      //(But this is only possible if we want to debug the program, somemore,
+                      //str_obdh_par.uc_cq_execution_hold_activation is now removed)
+                      //Thus, command executed register must be empty at this point
+                      g_uc_command_queue[0][0] = 0xBB;
+                      g_uc_command_queue[0][1] = g_uc_gsch_gs_cmd_header;
+                      g_uc_command_queue[0][2] = g_uc_gsch_gs_cmd_tail;
+                      g_uc_command_queue[0][3] = g_uc_gsch_gs_arg_len;
+                      for (l_us_i = COMMAND_HEADER_SIZE; l_us_i < g_uc_gsch_gs_arg_len+COMMAND_HEADER_SIZE; l_us_i++)
+                              g_uc_command_queue[0][l_us_i] = g_uc_gsch_gs_arg[l_us_i-COMMAND_HEADER_SIZE];
+              
+                      #if (CRC_ENABLE == 1)
+                      //Create CRC16 bytes for this command (may not be necessary, but well...)
+                      insertCRC16(&g_uc_command_queue[0], g_uc_gsch_gs_arg_len+COMMAND_HEADER_SIZE);
+                      #endif
+              
+                      #if (EVENT_HANDLER_ENABLE == 1)
+                      //dec22_yc here add even logging for command added to queue tested                      
+                      eventHandler(EV_MCC_TO_COMMAND,g_uc_gsch_gs_cmd_header,g_uc_gsch_gs_cmd_tail,
+                                      g_uc_command_queue[0][COMMAND_HEADER_SIZE],g_uc_command_queue[0][COMMAND_HEADER_SIZE+1],g_uc_command_qu
+             -eue[0][COMMAND_HEADER_SIZE+2],g_uc_command_queue[0][COMMAND_HEADER_SIZE+3]);
+                      #endif
+              
+                      //Add command queue size
+                      g_uc_command_queue_size++;
+              
+                      #endif
+              }
+              #endif
+ 512          
+ 513          #if (CRC_ENABLE == 1)
+ 514          //------------------------------------------------------------------------------------
+ 515          // To insert CRC16 bytes to an array
+ 516          //------------------------------------------------------------------------------------
+ 517          void insertCRC16 (unsigned char *l_uc_msg_pointer, unsigned short l_us_msg_length)
+ 518          {
+ 519   1              unsigned short l_us_temp_crc16 = 0xffff;
+ 520   1      
+ 521   1              l_us_temp_crc16 = createChecksum(l_uc_msg_pointer, l_us_msg_length, CHECKSUM_CRC16_TABLE);
+ 522   1              addChecksumBytes16 (l_uc_msg_pointer, l_us_msg_length, l_us_temp_crc16);
+ 523   1      
+ 524   1      }
+ 525          #endif
+ 526          
+ 527          //------------------------------------------------------------------------------------
+ 528          // To fill an array with various message
+ 529          //------------------------------------------------------------------------------------
+ 530          // Function's test result: untested
+ 531          //------------------------------------------------------------------------------------
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 10  
+
+ 532          unsigned short fillData (unsigned char *l_uc_array_p, unsigned short l_us_data_counter, unsigned short l_u
+             -s_data_type, unsigned short l_us_fill_argument)
+ 533          {
+ 534   1              unsigned short  l_us_counter_i;
+ 535   1              #if (FULL_ADD_ENABLE == 1)
+ 536   1              unsigned short  l_us_counter_j;
+ 537   1              unsigned char   l_uc_counter_k;
+ 538   1              unsigned char   l_uc_max_counter_k;
+ 539   1              unsigned short  l_us_dummy_var;
+ 540   1              #endif
+ 541   1              unsigned short  l_us_timer_multiplier = SYSCLK/12/200;
+ 542   1              float                   l_f_timer_mili_second[2];
+ 543   1      
+ 544   1              //Determines which data to send
+ 545   1              switch (l_us_data_type){
+ 546   2                      //Fill global error code (2)
+ 547   2                      case DATA_OBDH_G_US_ERROR_CODE:
+ 548   2                              l_us_data_counter = insertShortToArray(g_us_error_code,l_uc_array_p,l_us_data_counter);
+ 549   2                              break;
+ 550   2      
+ 551   2                      //Fill run time (4)
+ 552   2                      case DATA_OBDH_G_F_RUN_TIME:
+ 553   2                              for (l_us_counter_i = 0; l_us_counter_i < 2; l_us_counter_i++){
+ 554   3                                      g_us_timer_value[l_us_counter_i]                = ((unsigned short)((g_uc_timer_value_high[l_us_counter_i] << 8) & 
+             -0xFF00) + g_uc_timer_value_low[l_us_counter_i]);
+ 555   3                                      l_f_timer_mili_second[l_us_counter_i]   = g_us_timer_value[l_us_counter_i] / 2041.6 + l_us_timer_multip
+             -lier / 2041.6 * g_us_timer_flag_counter_value[l_us_counter_i]; //right constant here is 2041.6
+ 556   3                              }
+ 557   2                              
+ 558   2                              l_f_timer_mili_second[1] -= l_f_timer_mili_second[0];   
+ 559   2                              l_us_data_counter = insertFloatToArray(l_f_timer_mili_second[1],l_uc_array_p,l_us_data_counter);
+ 560   2                              break;
+ 561   2      
+ 562   2                      //Fill OBDH global multipurpose variables: g_uc
+ 563   2                      //Ian (2012-05-15): It is noted that the global multipurpose variables are not initialized
+ 564   2                      //                                      since they have no function on their own except as intermediate variables.
+ 565   2                      case DATA_CAT_OBDH_MP_VAR_G_UC:
+ 566   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc;
+ 567   2                              break;
+ 568   2      
+ 569   2                      //Fill OBDH global multipurpose variables: g_us
+ 570   2                      case DATA_CAT_OBDH_MP_VAR_G_US:
+ 571   2                              l_us_data_counter = insertShortToArray(g_us,l_uc_array_p,l_us_data_counter);
+ 572   2                              break;
+ 573   2      
+ 574   2                      //Fill OBDH global multipurpose variables: g_s
+ 575   2                      case DATA_CAT_OBDH_MP_VAR_G_S:
+ 576   2                              l_us_data_counter = insertShortToArray(g_s,l_uc_array_p,l_us_data_counter);
+ 577   2                              break;
+ 578   2      
+ 579   2                      //Fill OBDH global multipurpose variables: g_ul
+ 580   2                      case DATA_CAT_OBDH_MP_VAR_G_UL:
+ 581   2                              l_us_data_counter = insertLongToArray(g_ul,l_uc_array_p,l_us_data_counter);
+ 582   2                              break;
+ 583   2      
+ 584   2                      //Fill OBDH global multipurpose variables: g_f
+ 585   2                      case DATA_CAT_OBDH_MP_VAR_G_F:
+ 586   2                              l_us_data_counter = insertFloatToArray(g_f,l_uc_array_p,l_us_data_counter);
+ 587   2                              break;
+ 588   2      
+ 589   2                      #if (FULL_ADD_ENABLE == 1)
+ 590   2                      
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 11  
+
+ 591   2                      //Fill for latest HK sampling time and orbit (TAI format)
+ 592   2                      case DATA_CAT_LATEST_HK_SAMPLING_TIME_AND_ORBIT_TAI_FORMAT:
+ 593   2                              g_ul = str_obdh_data.ul_latest_hk_sampling_time_s + SECONDS_FROM_TAI_TO_KILL_SWITCH_DEACTIVATION;
+ 594   2                              l_us_data_counter = insertLongToArray(g_ul,l_uc_array_p,l_us_data_counter);
+ 595   2                              l_us_data_counter = insertShortToArray(str_obdh_data.us_latest_hk_sampling_orbit,l_uc_array_p,l_us_data
+             -_counter);
+ 596   2                              break;
+ 597   2      
+ 598   2                      //Fill for latest HK sampling time (from TAI)
+ 599   2                      case DATA_CAT_LATEST_HK_SAMPLING_TIME_TAI_FORMAT:
+ 600   2                              g_ul = str_obdh_data.ul_latest_hk_sampling_time_s + SECONDS_FROM_TAI_TO_KILL_SWITCH_DEACTIVATION;
+ 601   2                              l_us_data_counter = insertLongToArray(g_ul,l_uc_array_p,l_us_data_counter);
+ 602   2                              break;
+ 603   2      
+ 604   2                      //Fill satellite time (in second)
+ 605   2                      case DATA_CAT_OBDH_UL_OBC_TIME_S:
+ 606   2                              l_us_data_counter = insertLongToArray(str_obdh_data.ul_obc_time_s,l_uc_array_p,l_us_data_counter);
+ 607   2                              break;
+ 608   2      
+ 609   2                      //Fill satellite time (in second, TAI format)
+ 610   2                      case DATA_CAT_OBDH_PAR_TAI_UL_OBC_TIME_S:
+ 611   2                              //Lock OBC time before being used
+ 612   2                              g_ul = str_obdh_data.ul_obc_time_s + SECONDS_FROM_TAI_TO_KILL_SWITCH_DEACTIVATION;
+ 613   2                              l_us_data_counter = insertLongToArray(g_ul,l_uc_array_p,l_us_data_counter);
+ 614   2                              break;
+ 615   2      
+ 616   2                      //Fill for latest current orbit and latest current time in TAI format
+ 617   2                      case DATA_CAT_LATEST_TIME_AND_ORBIT_TAI_FORMAT:
+ 618   2                              //Lock OBC time before being used
+ 619   2                              g_ul = str_obdh_data.ul_obc_time_s + SECONDS_FROM_TAI_TO_KILL_SWITCH_DEACTIVATION;
+ 620   2                              l_us_data_counter = insertLongToArray(g_ul,l_uc_array_p,l_us_data_counter);
+ 621   2                              l_us_data_counter = insertShortToArray(str_obdh_data.us_current_rev_no,l_uc_array_p,l_us_data_counter);
+ 622   2                              break;
+ 623   2      
+ 624   2                      #endif
+ 625   2      
+ 626   2                      //Fill I2C data in (vary)
+ 627   2                      case DATA_CAT_BUF_I2C_DATA_IN_VARY:
+ 628   2                              for (l_us_counter_i = 0; l_us_counter_i < l_us_fill_argument; l_us_counter_i++)
+ 629   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_i2c_data_in[l_us_counter_i];               
+ 630   2                              break;
+ 631   2      
+ 632   2                      //Fill I2C data out (vary)
+ 633   2                      case DATA_CAT_BUF_I2C_DATA_OUT_VARY:
+ 634   2                              for (l_us_counter_i = 0; l_us_counter_i < l_us_fill_argument; l_us_counter_i++)
+ 635   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_i2c_data_out[l_us_counter_i];              
+ 636   2                              break;
+ 637   2      
+ 638   2                      #if (FULL_ADD_ENABLE == 1)
+ 639   2                      
+ 640   2                      //Fill SD card data in
+ 641   2                      case DATA_CAT_BUF_SD_DATA_IN:
+ 642   2                              for (l_us_counter_i = 0; l_us_counter_i < SD_CARD_BUFFER_SIZE; l_us_counter_i++)
+ 643   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_sd_data_buffer[l_us_counter_i];
+ 644   2                              break;
+ 645   2      
+ 646   2                      //Fill SD card data out
+ 647   2                      case DATA_CAT_BUF_SD_DATA_OUT:
+ 648   2                              for (l_us_counter_i = 0; l_us_counter_i < SD_CARD_BUFFER_SIZE; l_us_counter_i++)
+ 649   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_sd_data_buffer[l_us_counter_i];
+ 650   2                              break;
+ 651   2      
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 12  
+
+ 652   2                      //Fill global checksum register
+ 653   2                      case DATA_OBDH_G_US_CHECKSUM_REGISTER:
+ 654   2                              l_us_data_counter = insertShortToArray(g_us_checksum_register,l_uc_array_p,l_us_data_counter);
+ 655   2                              break;
+ 656   2      
+ 657   2                      //Fill satellite time
+ 658   2                      case DATA_CAT_SAT_TIME:
+ 659   2                              //Calculate current satellite time from str_obdh_data.ul_obc_time_s
+ 660   2                              //Lock OBC time before being used
+ 661   2                              g_ul = str_obdh_data.ul_obc_time_s + SECONDS_FROM_TAI_TO_KILL_SWITCH_DEACTIVATION;
+ 662   2      
+ 663   2                              //Get satellite day
+ 664   2                              str_sat_time.us_day = g_ul/86400;
+ 665   2                              g_ul %= 86400;
+ 666   2      
+ 667   2                              //Get satellite hour
+ 668   2                              str_sat_time.uc_hour = g_ul/3600;
+ 669   2                              g_ul %= 3600;
+ 670   2      
+ 671   2                              //Set satellite minute
+ 672   2                              str_sat_time.uc_min = g_ul/60;
+ 673   2                              g_ul %= 60;
+ 674   2      
+ 675   2                              //Set satellite seconds
+ 676   2                              str_sat_time.uc_s = g_ul;
+ 677   2      
+ 678   2                              //Set satellite miliseconds as zero for now
+ 679   2                              str_sat_time.us_ms = 0;
+ 680   2      
+ 681   2                              l_us_data_counter = insertShortToArray(str_sat_time.us_day,l_uc_array_p,l_us_data_counter);
+ 682   2                              *(l_uc_array_p + l_us_data_counter++) = str_sat_time.uc_hour; 
+ 683   2                              *(l_uc_array_p + l_us_data_counter++) = str_sat_time.uc_min; 
+ 684   2                              *(l_uc_array_p + l_us_data_counter++) = str_sat_time.uc_s; 
+ 685   2                              l_us_data_counter = insertShortToArray(str_sat_time.us_ms,l_uc_array_p,l_us_data_counter);
+ 686   2                              break;
+ 687   2      
+ 688   2                      //Fill satellite current date
+ 689   2                      case DATA_CAT_SAT_DATE_CURRENT:
+ 690   2                              //The order in the struct is consistent with hardware specs
+ 691   2                              //The order here is as the user/programmer would be more interested to see
+ 692   2                              *(l_uc_array_p + l_us_data_counter++) = str_sat_date.uc_current_day_of_month; 
+ 693   2                              *(l_uc_array_p + l_us_data_counter++) = str_sat_date.uc_current_month; 
+ 694   2                              *(l_uc_array_p + l_us_data_counter++) = str_sat_date.uc_current_year; 
+ 695   2                              *(l_uc_array_p + l_us_data_counter++) = str_sat_date.uc_current_hour; 
+ 696   2                              *(l_uc_array_p + l_us_data_counter++) = str_sat_date.uc_current_min; 
+ 697   2                              *(l_uc_array_p + l_us_data_counter++) = str_sat_date.uc_current_s; 
+ 698   2                              l_us_data_counter = insertShortToArray(str_sat_date.us_current_ms,l_uc_array_p,l_us_data_counter);
+ 699   2                              break;
+ 700   2      
+ 701   2                      //Fill satellite reference date
+ 702   2                      case DATA_CAT_SAT_DATE_INIT:
+ 703   2                              *(l_uc_array_p + l_us_data_counter++) = str_sat_date.uc_init_day_of_month; 
+ 704   2                              *(l_uc_array_p + l_us_data_counter++) = str_sat_date.uc_init_month; 
+ 705   2                              *(l_uc_array_p + l_us_data_counter++) = str_sat_date.uc_init_year; 
+ 706   2                              *(l_uc_array_p + l_us_data_counter++) = str_sat_date.uc_init_hour; 
+ 707   2                              *(l_uc_array_p + l_us_data_counter++) = str_sat_date.uc_init_min; 
+ 708   2                              *(l_uc_array_p + l_us_data_counter++) = str_sat_date.uc_init_s; 
+ 709   2                              l_us_data_counter = insertShortToArray(str_sat_date.us_init_ms,l_uc_array_p,l_us_data_counter);
+ 710   2                              break;
+ 711   2      
+ 712   2                      //Fill satellite update date
+ 713   2                      case DATA_CAT_SAT_DATE_UPDATE:
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 13  
+
+ 714   2                              *(l_uc_array_p + l_us_data_counter++) = str_date_update.uc_day; 
+ 715   2                              *(l_uc_array_p + l_us_data_counter++) = str_date_update.uc_month; 
+ 716   2                              *(l_uc_array_p + l_us_data_counter++) = str_date_update.uc_year; 
+ 717   2                              *(l_uc_array_p + l_us_data_counter++) = str_date_update.uc_hour; 
+ 718   2                              *(l_uc_array_p + l_us_data_counter++) = str_date_update.uc_min; 
+ 719   2                              *(l_uc_array_p + l_us_data_counter++) = str_date_update.uc_s; 
+ 720   2                              l_us_data_counter = insertShortToArray(str_date_update.us_ms,l_uc_array_p,l_us_data_counter);
+ 721   2                              break;
+ 722   2      
+ 723   2                      //Fill OBDH firmware version
+ 724   2                      case DATA_CAT_OBDH_FIRMWARE_VERSION:
+ 725   2                              for (l_us_counter_i = 0; l_us_counter_i < OBDH_FIRMWARE_VERSION_LENGTH; l_us_counter_i++)
+ 726   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_obdh_firmware_version[l_us_counter_i];
+ 727   2                              break;
+ 728   2      
+ 729   2                      //Fill with latest from to callsign
+ 730   2                      case DATA_CAT_FROM_TO_CALLSIGN:
+ 731   2                              for (l_us_counter_i = 0; l_us_counter_i < AX25_CALLSIGN_SIZE; l_us_counter_i++)
+ 732   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_from_to_callsign[l_us_counter_i];
+ 733   2                              break;
+ 734   2      
+ 735   2                      //Fill with OBDH selected HK data
+ 736   2                      case DATA_CAT_OBDH_SELECTED_HK:
+ 737   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_sat_mode;
+ 738   2                              l_us_data_counter = insertLongToArray(str_obdh_hk.ul_wod_sample_count,l_uc_array_p,l_us_data_counter);
+ 739   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_scheduler_block_size;
+ 740   2                              l_us_data_counter = insertShortToArray(str_obdh_hk.us_beacon_flag,l_uc_array_p,l_us_data_counter);
+ 741   2                              l_us_data_counter = insertShortToArray(str_obdh_hk.us_cw_char_rate_par,l_uc_array_p,l_us_data_counter);
+ 742   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_ax25_bit_rate_par;
+ 743   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_mcu_rst_count;
+ 744   2                              l_us_data_counter = insertLongToArray(str_obdh_hk.ul_data_byte_sent,l_uc_array_p,l_us_data_counter);
+ 745   2                              break;
+ 746   2      
+ 747   2                      //Fill with OBDH selected data
+ 748   2                      case DATA_CAT_OBDH_SELECTED_DATA:
+ 749   2                              //Lock rev offset time before being used
+ 750   2                              g_us = str_obdh_data.us_rev_offset_time;
+ 751   2      
+ 752   2                              //Lock auto reference no before being used
+ 753   2                              l_us_dummy_var = str_obdh_data.us_auto_reference_rev_no;
+ 754   2      
+ 755   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_data.uc_sat_rstsrc;
+ 756   2                              l_us_data_counter = insertLongToArray(str_obdh_data.ul_obc_time_s,l_uc_array_p,l_us_data_counter);
+ 757   2                              l_us_data_counter = insertShortToArray(str_obdh_data.us_current_rev_no,l_uc_array_p,l_us_data_counter);
+ 758   2                              l_us_data_counter = insertShortToArray(g_us,l_uc_array_p,l_us_data_counter);
+ 759   2                              for (l_us_counter_i = 0; l_us_counter_i < OBDH_DATA_INTERVAL_PERIOD_SIZE; l_us_counter_i++)
+ 760   2                                      l_us_data_counter = insertShortToArray(str_obdh_data.us_interval_period[l_us_counter_i],l_uc_array_p,l
+             -_us_data_counter);
+ 761   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_data.uc_previous_mode;
+ 762   2                              l_us_data_counter = insertFloatToArray(str_obdh_data.f_gs_reference_rev_no,l_uc_array_p,l_us_data_count
+             -er);
+ 763   2                              l_us_data_counter = insertLongToArray(str_obdh_data.ul_gs_ref_time_s,l_uc_array_p,l_us_data_counter);
+ 764   2                              l_us_data_counter = insertShortToArray(l_us_dummy_var,l_uc_array_p,l_us_data_counter);
+ 765   2                              l_us_data_counter = insertShortToArray(str_obdh_data.us_gs_reference_rev_no,l_uc_array_p,l_us_data_coun
+             -ter);
+ 766   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_data.uc_orbit_no_changed_counter;                      
+ 767   2                              break;
+ 768   2      
+ 769   2                      //Fill OBDH latest state
+ 770   2                      case DATA_CAT_SAT_STATE:
+ 771   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_evha_flag;                 
+ 772   2                              break;
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 14  
+
+ 773   2      
+ 774   2                      //Fill with OBDH housekeeping data
+ 775   2                      case DATA_CAT_OBDH_HK:
+ 776   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_sat_mode;
+ 777   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_gsch_state;
+ 778   2                              l_us_data_counter = insertLongToArray(str_obdh_hk.ul_wod_sample_count,l_uc_array_p,l_us_data_counter);
+ 779   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_scheduler_block_size;
+ 780   2                              l_us_data_counter = insertShortToArray(str_obdh_hk.us_beacon_flag,l_uc_array_p,l_us_data_counter);
+ 781   2                              l_us_data_counter = insertShortToArray(str_obdh_hk.us_brh_flag,l_uc_array_p,l_us_data_counter);
+ 782   2                              l_us_data_counter = insertShortToArray(str_obdh_hk.us_imh_flag,l_uc_array_p,l_us_data_counter);
+ 783   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_smh_flag;
+ 784   2                              l_us_data_counter = insertShortToArray(str_obdh_hk.us_cw_char_rate_par,l_uc_array_p,l_us_data_counter);
+ 785   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_ax25_bit_rate_par;
+ 786   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_mcu_rstsrc;
+ 787   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_mcu_rst_count;
+ 788   2                              l_us_data_counter = insertShortToArray(str_obdh_hk.s_mcu_temp,l_uc_array_p,l_us_data_counter);
+ 789   2                              l_us_data_counter = insertLongToArray(str_obdh_hk.ul_data_byte_sent,l_uc_array_p,l_us_data_counter);
+ 790   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_sat_rstsrc;
+ 791   2                              break;
+ 792   2      
+ 793   2                      //Fill OBDH SSCP
+ 794   2                      case DATA_CAT_OBDH_SSCP:
+ 795   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_par.uc_manual_control_enabled;
+ 796   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_par.uc_no_of_interrupt_per_s;
+ 797   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_par.uc_gsch_time_window_10s;
+ 798   2                              for (l_us_counter_i = 0; l_us_counter_i < NO_OF_SOC_THRESHOLD_PAR; l_us_counter_i++)                    
+ 799   2                                      *(l_uc_array_p + l_us_data_counter++) = str_obdh_par.uc_soc_threshold[l_us_counter_i];
+ 800   2                              l_us_data_counter = insertShortToArray(str_obdh_par.us_rev_time_s,l_uc_array_p,l_us_data_counter);
+ 801   2                              for (l_us_counter_i = 0; l_us_counter_i < MAX_NO_OF_DATA_TYPE_LOGGED; l_us_counter_i++)
+ 802   2                                      l_us_data_counter = insertShortToArray(str_obdh_par.us_log_data_id[l_us_counter_i],l_uc_array_p,l_us_d
+             -ata_counter);
+ 803   2                              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+ 804   2                                      l_us_data_counter = insertShortToArray(str_obdh_par.us_br_threshold_low[l_us_counter_i],l_uc_array_p,l
+             -_us_data_counter);
+ 805   2                              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+ 806   2                                      l_us_data_counter = insertShortToArray(str_obdh_par.us_br_threshold_high[l_us_counter_i],l_uc_array_p,
+             -l_us_data_counter);
+ 807   2                              for (l_us_counter_i = 0; l_us_counter_i < NO_OF_BEACON_INTERVAL; l_us_counter_i++)
+ 808   2                                      *(l_uc_array_p + l_us_data_counter++) = str_obdh_par.uc_beacon_interval[l_us_counter_i];
+ 809   2                              l_us_data_counter = insertLongToArray(str_obdh_par.ul_det_uptime_limit_s,l_uc_array_p,l_us_data_counter
+             -);
+ 810   2                              break;
+ 811   2      
+ 812   2                      //Fill OBDH block pointers
+ 813   2                      case DATA_CAT_OBDH_BP:
+ 814   2                              l_us_data_counter = insertLongToArray(str_bp.ul_hk_write_p,l_uc_array_p,l_us_data_counter);
+ 815   2                              l_us_data_counter = insertLongToArray(str_bp.ul_datalog_write_p,l_uc_array_p,l_us_data_counter);
+ 816   2                              l_us_data_counter = insertLongToArray(str_bp.ul_package_recovery_write_p,l_uc_array_p,l_us_data_counter
+             -);
+ 817   2                              l_us_data_counter = insertLongToArray(str_bp.ul_eventlog_write_p,l_uc_array_p,l_us_data_counter);//dec2
+             -2_yc
+ 818   2                              *(l_uc_array_p + l_us_data_counter++) = str_bp.uc_hk_overwritten;
+ 819   2                              *(l_uc_array_p + l_us_data_counter++) = str_bp.uc_orbit_indexing_overwritten;
+ 820   2                              break;
+ 821   2      
+ 822   2                      //Fill COMM complete HK
+ 823   2                      case DATA_CAT_COMM_HK:
+ 824   2                              l_us_data_counter = insertShortToArray(str_imc_hk.us_doppler_offset,l_uc_array_p,l_us_data_counter);
+ 825   2                              l_us_data_counter = insertShortToArray(str_imc_hk.us_receiver_signal_strength,l_uc_array_p,l_us_data_co
+             -unter);
+ 826   2                              l_us_data_counter = insertShortToArray(str_imc_hk.us_transmitter_reflected_power,l_uc_array_p,l_us_data
+             -_counter);
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 15  
+
+ 827   2                              l_us_data_counter = insertShortToArray(str_imc_hk.us_transmitter_forward_power,l_uc_array_p,l_us_data_c
+             -ounter);
+ 828   2                              l_us_data_counter = insertShortToArray(str_imc_hk.us_transmitter_current_consumption,l_uc_array_p,l_us_
+             -data_counter);
+ 829   2                              l_us_data_counter = insertShortToArray(str_imc_hk.us_receiver_current_consumption,l_uc_array_p,l_us_dat
+             -a_counter);
+ 830   2                              l_us_data_counter = insertShortToArray(str_imc_hk.us_power_amplifier_temperature,l_uc_array_p,l_us_data
+             -_counter);
+ 831   2                              l_us_data_counter = insertShortToArray(str_imc_hk.us_power_bus_voltage,l_uc_array_p,l_us_data_counter);
+ 832   2                              *(l_uc_array_p + l_us_data_counter++) = str_itc_hk.uc_transmitter_state;
+ 833   2                              break;
+ 834   2      
+ 835   2                      //Fill with the remaining COMM data (Non-HK)
+ 836   2                      case DATA_CAT_COMM_DATA:
+ 837   2                              *(l_uc_array_p + l_us_data_counter++) = str_imc_hk.uc_receiver_no_of_frame;
+ 838   2                              *(l_uc_array_p + l_us_data_counter++) = str_imc_hk.uc_receiver_uptime_minutes;
+ 839   2                              *(l_uc_array_p + l_us_data_counter++) = str_imc_hk.uc_receiver_uptime_hours;
+ 840   2                              *(l_uc_array_p + l_us_data_counter++) = str_imc_hk.uc_receiver_uptime_days;
+ 841   2                              *(l_uc_array_p + l_us_data_counter++) = str_itc_hk.uc_transmitter_uptime_minutes;
+ 842   2                              *(l_uc_array_p + l_us_data_counter++) = str_itc_hk.uc_transmitter_uptime_hours;
+ 843   2                              *(l_uc_array_p + l_us_data_counter++) = str_itc_hk.uc_transmitter_uptime_days;
+ 844   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_ax25_bit_rate_par;
+ 845   2                              l_us_data_counter = insertShortToArray(str_obdh_hk.us_cw_char_rate_par,l_uc_array_p,l_us_data_counter);
+ 846   2                              break;
+ 847   2      
+ 848   2                      #endif
+ 849   2      
+ 850   2                      //Fill PWRS complete HK
+ 851   2                      case DATA_CAT_PWRS_HK:
+ 852   2                              for (l_us_counter_i = 0; l_us_counter_i < 5; l_us_counter_i++)
+ 853   2                                      *(l_uc_array_p + l_us_data_counter++) = str_pwrs_hk.uc_sp_temp[l_us_counter_i];
+ 854   2                              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+ 855   2                                      l_us_data_counter = insertShortToArray(str_pwrs_hk.us_pv_v[l_us_counter_i],l_uc_array_p,l_us_data_coun
+             -ter);
+ 856   2                              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+ 857   2                                      l_us_data_counter = insertShortToArray(str_pwrs_hk.us_pv_i[l_us_counter_i],l_uc_array_p,l_us_data_coun
+             -ter);
+ 858   2                              for (l_us_counter_i = 0; l_us_counter_i < 2; l_us_counter_i++)
+ 859   2                                      l_us_data_counter = insertShortToArray(str_pwrs_hk.us_batt_v[l_us_counter_i],l_uc_array_p,l_us_data_co
+             -unter);
+ 860   2                              l_us_data_counter = insertShortToArray(str_pwrs_hk.us_batt_i,l_uc_array_p,l_us_data_counter);
+ 861   2                              *(l_uc_array_p + l_us_data_counter++) = str_pwrs_hk.uc_batt_soc;
+ 862   2                              *(l_uc_array_p + l_us_data_counter++) = str_pwrs_hk.uc_batt_temp[0];
+ 863   2                              *(l_uc_array_p + l_us_data_counter++) = str_pwrs_hk.uc_batt_temp[1];
+ 864   2                              l_us_data_counter = insertShortToArray(str_pwrs_hk.us_sys_i,l_uc_array_p,l_us_data_counter);
+ 865   2                              l_us_data_counter = insertShortToArray(str_pwrs_hk.us_pcc_v,l_uc_array_p,l_us_data_counter);
+ 866   2                              for (l_us_counter_i = 0; l_us_counter_i < 4; l_us_counter_i++)
+ 867   2                                      l_us_data_counter = insertShortToArray(str_pwrs_hk.us_load_v[l_us_counter_i],l_uc_array_p,l_us_data_co
+             -unter);
+ 868   2                              for (l_us_counter_i = 0; l_us_counter_i < 4; l_us_counter_i++)
+ 869   2                                      l_us_data_counter = insertShortToArray(str_pwrs_hk.us_load_i[l_us_counter_i],l_uc_array_p,l_us_data_co
+             -unter);
+ 870   2                              for (l_us_counter_i = 0; l_us_counter_i < 4; l_us_counter_i++)
+ 871   2                                      *(l_uc_array_p + l_us_data_counter++) = str_pwrs_hk.uc_latch_count[l_us_counter_i];
+ 872   2                              *(l_uc_array_p + l_us_data_counter++) = str_pwrs_hk.uc_rst_count;
+ 873   2                              *(l_uc_array_p + l_us_data_counter++) = str_pwrs_hk.uc_rst_cause;
+ 874   2                              *(l_uc_array_p + l_us_data_counter++) = str_pwrs_hk.uc_mode;
+ 875   2                              l_us_data_counter = insertShortToArray(str_pwrs_hk.s_mcu_temp,l_uc_array_p,l_us_data_counter);
+ 876   2                              *(l_uc_array_p + l_us_data_counter++) = str_pwrs_hk.c_mcu_rstsrc;
+ 877   2                              break;
+ 878   2      
+ 879   2                      //Fill PWRS complete SSCP
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 16  
+
+ 880   2                      case DATA_CAT_PWRS_SSCP:
+ 881   2                              *(l_uc_array_p + l_us_data_counter++) = str_pwrs_par.uc_mppt_mode;
+ 882   2                              *(l_uc_array_p + l_us_data_counter++) = str_pwrs_par.uc_batt_heater;
+ 883   2                              *(l_uc_array_p + l_us_data_counter++) = str_pwrs_par.uc_batt_charge_upp_limit;
+ 884   2                              *(l_uc_array_p + l_us_data_counter++) = str_pwrs_par.uc_batt_charge_low_limit;
+ 885   2                              break;
+ 886   2      
+ 887   2                      //Fill PWRS complete data
+ 888   2                      case DATA_CAT_PWRS_DATA:
+ 889   2                              *(l_uc_array_p + l_us_data_counter++) = str_pwrs_data.uc_channel_status;                
+ 890   2                              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+ 891   2                                      l_us_data_counter = insertShortToArray(str_pwrs_data.us_pv_fv[l_us_counter_i],l_uc_array_p,l_us_data_c
+             -ounter);
+ 892   2                              break;
+ 893   2      
+ 894   2                      //Fill ADCS complete HK
+ 895   2                      case DATA_CAT_ADCS_HK:
+ 896   2                              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+ 897   2                                      l_us_data_counter = insertFloatToArray(str_adcs_hk.f_sunv[l_us_counter_i],l_uc_array_p,l_us_data_count
+             -er);
+ 898   2                              for (l_us_counter_i = 0; l_us_counter_i < 4; l_us_counter_i++)
+ 899   2                                      l_us_data_counter = insertFloatToArray(str_adcs_hk.f_qeb[l_us_counter_i],l_uc_array_p,l_us_data_counte
+             -r);
+ 900   2                              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+ 901   2                                      l_us_data_counter = insertShortToArray(str_adcs_hk.s_br_eci[l_us_counter_i],l_uc_array_p,l_us_data_cou
+             -nter);
+ 902   2                              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+ 903   2                                      l_us_data_counter = insertFloatToArray(str_adcs_hk.f_posv[l_us_counter_i],l_uc_array_p,l_us_data_count
+             -er);
+ 904   2                              *(l_uc_array_p + l_us_data_counter++) = str_adcs_hk.c_sensor_enable;
+ 905   2                              *(l_uc_array_p + l_us_data_counter++) = str_adcs_hk.c_sensor_credit;
+ 906   2                              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+ 907   2                                      *(l_uc_array_p + l_us_data_counter++) = str_adcs_hk.c_ac_m[l_us_counter_i];
+ 908   2                              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+ 909   2                                      *(l_uc_array_p + l_us_data_counter++) = str_adcs_hk.c_mt_i[l_us_counter_i];
+ 910   2                              *(l_uc_array_p + l_us_data_counter++) = str_adcs_hk.c_actuator_enable;
+ 911   2                              *(l_uc_array_p + l_us_data_counter++) = str_adcs_hk.c_mode;
+ 912   2                              l_us_data_counter = insertShortToArray(str_adcs_hk.s_mcu_temp,l_uc_array_p,l_us_data_counter);
+ 913   2                              *(l_uc_array_p + l_us_data_counter++) = str_adcs_hk.c_mcu_rstsrc;
+ 914   2                              break;
+ 915   2      
+ 916   2                      //Fill ADCS complete SSCP
+ 917   2                      case DATA_CAT_ADCS_SSCP:
+ 918   2                              l_us_data_counter = insertShortToArray(str_adcs_par.s_ss_threshold,l_uc_array_p,l_us_data_counter);
+ 919   2                              for (l_us_counter_i = 0; l_us_counter_i < NO_OF_ADCS_CGAIN; l_us_counter_i++)
+ 920   2                                      l_us_data_counter = insertFloatToArray(str_adcs_par.f_cgain[l_us_counter_i],l_uc_array_p,l_us_data_cou
+             -nter);        
+ 921   2                              l_us_data_counter = insertFloatToArray(str_adcs_par.f_tle_epoch,l_uc_array_p,l_us_data_counter);
+ 922   2                              l_us_data_counter = insertFloatToArray(str_adcs_par.f_tle_inc,l_uc_array_p,l_us_data_counter);
+ 923   2                              l_us_data_counter = insertFloatToArray(str_adcs_par.f_tle_raan,l_uc_array_p,l_us_data_counter);
+ 924   2                              l_us_data_counter = insertFloatToArray(str_adcs_par.f_tle_arg_per,l_uc_array_p,l_us_data_counter);
+ 925   2                              l_us_data_counter = insertFloatToArray(str_adcs_par.f_tle_ecc,l_uc_array_p,l_us_data_counter);
+ 926   2                              l_us_data_counter = insertFloatToArray(str_adcs_par.f_tle_ma,l_uc_array_p,l_us_data_counter);
+ 927   2                              l_us_data_counter = insertShortToArray(str_adcs_par.us_tle_mm,l_uc_array_p,l_us_data_counter);
+ 928   2                              l_us_data_counter = insertLongToArray(str_adcs_par.ul_time,l_uc_array_p,l_us_data_counter);
+ 929   2                              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+ 930   2                                      l_us_data_counter = insertShortToArray(str_adcs_par.s_vector_2sun[l_us_counter_i],l_uc_array_p,l_us_da
+             -ta_counter);
+ 931   2                              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+ 932   2                                      *(l_uc_array_p + l_us_data_counter++) = str_adcs_par.c_ctrl_br[l_us_counter_i];
+ 933   2                              l_us_data_counter = insertShortToArray(str_adcs_par.s_dgain,l_uc_array_p,l_us_data_counter);
+ 934   2                              break;
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 17  
+
+ 935   2      
+ 936   2                      #if (FULL_ADD_ENABLE == 1)
+ 937   2                      
+ 938   2                      //Fill with last housekeeping error codes
+ 939   2                      case DATA_CAT_LAST_HK_EC:
+ 940   2                              l_us_data_counter = insertShortToArray(g_us_latest_pwrs_hk_ec,l_uc_array_p,l_us_data_counter);
+ 941   2                              l_us_data_counter = insertShortToArray(g_us_latest_adcs_hk_ec,l_uc_array_p,l_us_data_counter);
+ 942   2                              l_us_data_counter = insertShortToArray(g_us_latest_comm_hk_ec,l_uc_array_p,l_us_data_counter);
+ 943   2                              l_us_data_counter = insertShortToArray(g_us_latest_obdh_hk_ec,l_uc_array_p,l_us_data_counter);
+ 944   2                              break;
+ 945   2      
+ 946   2                      //Fill with last SSCP error codes
+ 947   2                      case DATA_CAT_LAST_SSCP_EC:
+ 948   2                              l_us_data_counter = insertShortToArray(g_us_latest_pwrs_sscp_ec,l_uc_array_p,l_us_data_counter);
+ 949   2                              l_us_data_counter = insertShortToArray(g_us_latest_adcs_sscp_ec,l_uc_array_p,l_us_data_counter);
+ 950   2                              l_us_data_counter = insertShortToArray(g_us_latest_obdh_sscp_ec,l_uc_array_p,l_us_data_counter);
+ 951   2                              break;
+ 952   2      
+ 953   2                      //Fill task status (with argument)
+ 954   2                      case DATA_CAT_SINGLE_TASK_UC_STATUS:
+ 955   2                              *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_fill_argument].uc_status;
+ 956   2                              break;
+ 957   2      
+ 958   2                      //Fill task structure (single)
+ 959   2                      case DATA_CAT_SINGLE_TASK_STRUCTURE:
+ 960   2                              *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_fill_argument].uc_status;
+ 961   2                              *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_fill_argument].uc_scriptspace;
+ 962   2                              *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_fill_argument].uc_script_running_flags;
+ 963   2                              *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_fill_argument].uc_script_error_flags;
+ 964   2                              *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_fill_argument].uc_script_completed_flags;
+ 965   2                              *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_fill_argument].uc_script_timer_owning_flags;
+ 966   2                              *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_fill_argument].uc_script_timer_running_flags;
+ 967   2                              *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_fill_argument].uc_script_retry_counter_owning_fla
+             -gs;
+ 968   2                              break;
+ 969   2      
+ 970   2                      //Fill scriptspace (with argument)
+ 971   2                      //This case could be invoked from PC by a debugging software as some other cases
+ 972   2                      case DATA_CAT_SINGLE_SCRIPTSPACE:
+ 973   2                              for (l_us_counter_i = 0; l_us_counter_i < MAX_SCRIPTLINE_SIZE; l_us_counter_i++)
+ 974   2                                      for (l_us_counter_j = 0; l_us_counter_j < MAX_SCRIPT_LENGTH; l_us_counter_j++)
+ 975   2                                      *(l_uc_array_p + l_us_data_counter++) = str_scriptspace[l_us_fill_argument].uc_script[l_us_counter_i][
+             -l_us_counter_j];
+ 976   2                              break;
+ 977   2      
+ 978   2                      //Fill scriptline timer
+ 979   2                      case DATA_CAT_SCRIPTLINE_TIMER:
+ 980   2                              *(l_uc_array_p + l_us_data_counter++) = str_scriptline_timer[l_us_fill_argument].uc_scriptspace_owner;
+ 981   2                              *(l_uc_array_p + l_us_data_counter++) = str_scriptline_timer[l_us_fill_argument].uc_scriptline_owner;
+ 982   2                              *(l_uc_array_p + l_us_data_counter++) = str_scriptline_timer[l_us_fill_argument].uc_started;
+ 983   2                              *(l_uc_array_p + l_us_data_counter++) = str_scriptline_timer[l_us_fill_argument].uc_counter;
+ 984   2                              l_us_data_counter = insertLongToArray(str_scriptline_timer[l_us_fill_argument].ul_timer,l_uc_array_p,l_
+             -us_data_counter);
+ 985   2                              break;
+ 986   2      
+ 987   2                      //Fill task retry counter
+ 988   2                      case DATA_CAT_SCRIPTLINE_RETRY_COUNTER:
+ 989   2                              *(l_uc_array_p + l_us_data_counter++) = str_scriptline_retry_counter[l_us_fill_argument].uc_scriptspace
+             -_owner;
+ 990   2                              *(l_uc_array_p + l_us_data_counter++) = str_scriptline_retry_counter[l_us_fill_argument].uc_scriptline_
+             -owner;
+ 991   2                              *(l_uc_array_p + l_us_data_counter++) = str_scriptline_retry_counter[l_us_fill_argument].uc_counter;
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 18  
+
+ 992   2                              break;
+ 993   2      
+ 994   2                      //Fill schedule (with index)
+ 995   2                      case DATA_CAT_SCHEDULE:
+ 996   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_scheduler_block_size;
+ 997   2                              for (l_us_counter_j = 0; l_us_counter_j < MAX_SCHEDULER_ARG; l_us_counter_j++)
+ 998   2                                      *(l_uc_array_p + l_us_data_counter++) = str_scheduler.uc_arg_register[l_us_counter_j];
+ 999   2              
+1000   2                              //Magic constant 10 is changed to NO_OF_SCHEDULE_PER_DATA_CATEGORY (20120328)
+1001   2                              for (l_us_counter_i = (l_us_fill_argument-1)*NO_OF_SCHEDULE_PER_DATA_CATEGORY; l_us_counter_i < l_us_fi
+             -ll_argument*NO_OF_SCHEDULE_PER_DATA_CATEGORY; l_us_counter_i++){
+1002   3                                      *(l_uc_array_p + l_us_data_counter++) = str_scheduler.uc_reindexing[l_us_counter_i];
+1003   3                                      l_us_data_counter = insertLongToArray(str_scheduler.ul_scheduled_time[l_us_counter_i],l_uc_array_p,l_u
+             -s_data_counter);
+1004   3                                      l_us_data_counter = insertShortToArray(str_scheduler.us_cmd[l_us_counter_i],l_uc_array_p,l_us_data_cou
+             -nter);
+1005   3                                      *(l_uc_array_p + l_us_data_counter++) = str_scheduler.uc_arg_length[l_us_counter_i];
+1006   3                                      for (l_us_counter_j = 0; l_us_counter_j < MAX_SCHEDULER_ARG; l_us_counter_j++)
+1007   3                                              *(l_uc_array_p + l_us_data_counter++) = str_scheduler.uc_arg[l_us_counter_i][l_us_counter_j];
+1008   3                              }
+1009   2                              break;
+1010   2      
+1011   2                      //Fill schedule (fix)
+1012   2                      //Schedule parameter
+1013   2                      case DATA_CAT_SCHEDULE_PAR:
+1014   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_scheduler_block_size;
+1015   2                              break;
+1016   2      
+1017   2                      //Schedule 1 to 70
+1018   2                      case DATA_CAT_SCHEDULE_1_TO_10:
+1019   2                      case DATA_CAT_SCHEDULE_11_TO_20:
+1020   2                      case DATA_CAT_SCHEDULE_21_TO_30:
+1021   2                      case DATA_CAT_SCHEDULE_31_TO_40:
+1022   2                      case DATA_CAT_SCHEDULE_41_TO_50:
+1023   2                      case DATA_CAT_SCHEDULE_51_TO_60:
+1024   2                      case DATA_CAT_SCHEDULE_61_TO_70:
+1025   2                              for (l_us_counter_i = (l_us_data_type-DATA_CAT_SCHEDULE_1_TO_10)*10; l_us_counter_i < (l_us_data_type-D
+             -ATA_CAT_SCHEDULE_1_TO_10+1)*10; l_us_counter_i++){
+1026   3                                      *(l_uc_array_p + l_us_data_counter++) = str_scheduler.uc_reindexing[l_us_counter_i];
+1027   3                                      l_us_data_counter = insertLongToArray(str_scheduler.ul_scheduled_time[l_us_counter_i],l_uc_array_p,l_u
+             -s_data_counter);
+1028   3                                      l_us_data_counter = insertShortToArray(str_scheduler.us_cmd[l_us_counter_i],l_uc_array_p,l_us_data_cou
+             -nter);
+1029   3                                      *(l_uc_array_p + l_us_data_counter++) = str_scheduler.uc_arg_length[l_us_counter_i];
+1030   3                                      for (l_us_counter_j = 0; l_us_counter_j < MAX_SCHEDULER_ARG; l_us_counter_j++)
+1031   3                                              *(l_uc_array_p + l_us_data_counter++) = str_scheduler.uc_arg[l_us_counter_i][l_us_counter_j];
+1032   3                              }
+1033   2                              break;
+1034   2      
+1035   2                      //Fill scriptline (fix)
+1036   2                      //Scripspace parameter
+1037   2                      case DATA_CAT_SCRIPTSPACE_PAR:
+1038   2                              for (l_us_counter_i = 0; l_us_counter_i < TASK_SIZE; l_us_counter_i++)
+1039   2                                      *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_counter_i].uc_scriptspace;
+1040   2                              break;
+1041   2      
+1042   2                      //Scriptspace 1 to 10
+1043   2                      case DATA_CAT_SCRIPTSPACE_1:
+1044   2                      case DATA_CAT_SCRIPTSPACE_2:
+1045   2                      case DATA_CAT_SCRIPTSPACE_3:
+1046   2                      case DATA_CAT_SCRIPTSPACE_4:
+1047   2                      case DATA_CAT_SCRIPTSPACE_5:
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 19  
+
+1048   2                      case DATA_CAT_SCRIPTSPACE_6:
+1049   2                      case DATA_CAT_SCRIPTSPACE_7:
+1050   2                      case DATA_CAT_SCRIPTSPACE_8:
+1051   2                      case DATA_CAT_SCRIPTSPACE_9:
+1052   2                      case DATA_CAT_SCRIPTSPACE_10:
+1053   2                              for (l_us_counter_i = 0; l_us_counter_i < MAX_SCRIPTLINE_SIZE; l_us_counter_i++)
+1054   2                                      for (l_us_counter_j = 0; l_us_counter_j < MAX_SCRIPT_LENGTH; l_us_counter_j++)
+1055   2                                              *(l_uc_array_p + l_us_data_counter++) = str_scriptspace[l_us_data_type-DATA_CAT_SCRIPTSPACE_1].uc_scr
+             -ipt[l_us_counter_i][l_us_counter_j];
+1056   2                              break;
+1057   2      
+1058   2                      //Fill task structure (complete)
+1059   2                      case DATA_CAT_COMPLETE_TASK_STRUCTURE:
+1060   2                              for (l_us_counter_i = 0; l_us_counter_i < TASK_SIZE; l_us_counter_i++){
+1061   3                                      *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_counter_i].uc_status;
+1062   3                                      *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_counter_i].uc_scriptspace;
+1063   3                                      *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_counter_i].uc_script_running_flags;
+1064   3                                      *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_counter_i].uc_script_error_flags;
+1065   3                                      *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_counter_i].uc_script_completed_flags;
+1066   3                                      *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_counter_i].uc_script_timer_owning_flags;
+1067   3                                      *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_counter_i].uc_script_timer_running_flags;
+1068   3                                      *(l_uc_array_p + l_us_data_counter++) = str_task[l_us_counter_i].uc_script_retry_counter_owning_flags;
+1069   3                              }
+1070   2                              break;
+1071   2      
+1072   2                      //Fill SD header
+1073   2                      case DATA_CAT_SD_HEADER:
+1074   2                              //Lock OBC time before being written
+1075   2                              g_ul = (str_obdh_data.ul_obc_time_s + SECONDS_FROM_TAI_TO_KILL_SWITCH_DEACTIVATION);
+1076   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_sd_header_subsystem;
+1077   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_sd_header_data_type;
+1078   2                              l_us_data_counter = insertShortToArray(g_us_sd_header_block_property,l_uc_array_p,l_us_data_counter);
+1079   2                              l_us_data_counter = insertShortToArray(g_us_sd_header_no_of_this_block,l_uc_array_p,l_us_data_counter);
+1080   2                              l_us_data_counter = insertShortToArray((g_us_sd_header_this_block_data_size-1),l_uc_array_p,l_us_data_c
+             -ounter);
+1081   2                              l_us_data_counter = insertLongToArray(g_ul_initial_sd_card_bp,l_uc_array_p,l_us_data_counter);
+1082   2                              l_us_data_counter = insertLongToArray(g_ul,l_uc_array_p,l_us_data_counter);
+1083   2                              l_us_data_counter = insertShortToArray(str_obdh_data.us_current_rev_no,l_uc_array_p,l_us_data_counter);
+1084   2                              l_us_data_counter = insertLongToArray(g_ul_sd_header_sd_write_block,l_uc_array_p,l_us_data_counter);
+1085   2                              break;
+1086   2      
+1087   2                      //Fill AX.25 header
+1088   2                      case DATA_CAT_AX25_HEADER:
+1089   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_ax25_header_subsystem;
+1090   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_ax25_header_data_type;
+1091   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_ax25_header_package_property;
+1092   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_ax25_header_no_of_this_package;
+1093   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_ax25_header_this_package_size;
+1094   2                              break;
+1095   2      
+1096   2                      //Fill data storing variables
+1097   2                      case DATA_CAT_STORING_VAR:
+1098   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_no_of_data_saved;
+1099   2                              for (l_us_counter_i = 0; l_us_counter_i < MAX_NO_OF_DATA_TYPE_TO_BE_SAVED; l_us_counter_i++)
+1100   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_data_type_saved_buffer[l_us_counter_i];
+1101   2                              l_us_data_counter = insertLongToArray(g_ul_initial_sd_card_bp,l_uc_array_p,l_us_data_counter);
+1102   2                              l_us_data_counter = insertLongToArray((*g_ul_initial_sd_card_bp_address),l_uc_array_p,l_us_data_counter
+             -);
+1103   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_no_of_copies;
+1104   2                              *(l_uc_array_p + l_us_data_counter++) = (*g_uc_no_of_overwritten_p);
+1105   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_data_sets_property;
+1106   2                              l_us_data_counter = insertLongToArray(g_ul_memory_address_lower_limit,l_uc_array_p,l_us_data_counter);
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 20  
+
+1107   2                              l_us_data_counter = insertLongToArray(g_ul_memory_address_upper_limit,l_uc_array_p,l_us_data_counter);
+1108   2                              l_us_data_counter = insertLongToArray(g_ul_memory_address_end,l_uc_array_p,l_us_data_counter);
+1109   2                              l_us_data_counter = insertLongToArray(g_ul_end_sd_card_load_bp,l_uc_array_p,l_us_data_counter);
+1110   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_sd_load_data_timeout_counter;
+1111   2                              l_us_data_counter = insertShortToArray(g_us_sd_load_error_code,l_uc_array_p,l_us_data_counter);
+1112   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_save_data_hold_timeout_counter;
+1113   2                              break;
+1114   2      
+1115   2                      //Fill data sending variables
+1116   2                      case DATA_CAT_SENDING_VAR:
+1117   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_no_of_data_sent;
+1118   2                              for (l_us_counter_i = 0; l_us_counter_i < MAX_NO_OF_DATA_TYPE_TO_BE_SENT; l_us_counter_i++)
+1119   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_data_type_sent_buffer[l_us_counter_i];
+1120   2                              l_us_data_counter = insertShortToArray(g_us_sd_card_meaningful_data_size,l_uc_array_p,l_us_data_counter
+             -);
+1121   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_current_data_sent_counter;
+1122   2                              l_us_data_counter = insertShortToArray(g_us_beacon_send_error_code,l_uc_array_p,l_us_data_counter);
+1123   2                              break;
+1124   2      
+1125   2                      //Fill OBS variables
+1126   2                      case DATA_CAT_OBS_VAR:
+1127   2                              l_us_data_counter = insertLongToArray(g_ul_obs_initial_bp,l_uc_array_p,l_us_data_counter);
+1128   2                              l_us_data_counter = insertLongToArray(g_ul_obs_end_bp,l_uc_array_p,l_us_data_counter);
+1129   2                              l_us_data_counter = insertShortToArray(g_us_obs_first_orbit_request,l_uc_array_p,l_us_data_counter);
+1130   2                              l_us_data_counter = insertShortToArray(g_us_obs_last_orbit_request,l_uc_array_p,l_us_data_counter);
+1131   2                              break;
+1132   2      
+1133   2                      //Fill with complete beacon handler variables
+1134   2                      case DATA_CAT_COMPLETE_BEACON_DATA_VAR:
+1135   2                              l_us_data_counter = insertShortToArray(str_obdh_hk.us_beacon_flag,l_uc_array_p,l_us_data_counter);
+1136   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_beacon_time_since_last_timeout_sending;
+1137   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_beacon_timeout_value;
+1138   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_beacon_retry_counter;
+1139   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_beacon_timeout_retry_counter;
+1140   2                              l_us_data_counter = insertShortToArray(g_us_beacon_init_ax25_error_code,l_uc_array_p,l_us_data_counter)
+             -;
+1141   2                              l_us_data_counter = insertShortToArray(g_us_beacon_monitoring_time,l_uc_array_p,l_us_data_counter);
+1142   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_beacon_error_counter;
+1143   2                              for (l_us_counter_i = 0; l_us_counter_i < NO_OF_BEACON_INTERVAL; l_us_counter_i++)
+1144   2                                      *(l_uc_array_p + l_us_data_counter++) = str_obdh_par.uc_beacon_interval[l_us_counter_i];
+1145   2                              break;
+1146   2      
+1147   2                      #if (BODY_RATE_HANDLER_ENABLE == 1)
+1148   2                      #if (ADCS_CMD_ENABLE == 1)
+1149   2                      #if (PWRS_CMD_ENABLE == 1)
+1150   2                      //Fill with complete bodyRateHandler variables
+1151   2                      case DATA_CAT_COMPLETE_BRH_DATA_VAR:
+1152   2                              l_us_data_counter = insertShortToArray(str_obdh_hk.us_brh_flag,l_uc_array_p,l_us_data_counter);
+1153   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_brh_retry_counter;
+1154   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_brh_timeout_retry_counter;
+1155   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_brh_wait_det_time_s;
+1156   2                              l_us_data_counter = insertLongToArray(g_ul_det_uptime_s,l_uc_array_p,l_us_data_counter);
+1157   2                              l_us_data_counter = insertLongToArray(str_obdh_par.ul_det_uptime_limit_s,l_uc_array_p,l_us_data_counter
+             -);
+1158   2                              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+1159   2                                      l_us_data_counter = insertShortToArray(str_obdh_data.us_br_eci_avg[l_us_counter_i],l_uc_array_p,l_us_d
+             -ata_counter);
+1160   2                              for (l_us_counter_i = 0; l_us_counter_i < 3; l_us_counter_i++)
+1161   2                                      for (l_us_counter_j = 0; l_us_counter_j < BR_ECI_SAMPLE_NO; l_us_counter_j++)
+1162   2                                              l_us_data_counter = insertShortToArray(g_s_br_eci[l_us_counter_i][l_us_counter_j],l_uc_array_p,l_us_d
+             -ata_counter);
+1163   2                              break;
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 21  
+
+1164   2                      #endif
+1165   2                      #endif
+1166   2                      #endif
+1167   2      
+1168   2                      #if (IDLE_MODE_HANDLER_ENABLE == 1)
+1169   2                      #if (PWRS_CMD_ENABLE == 1)
+1170   2                      //Fill with complete idleModeHandler variables
+1171   2                      case DATA_CAT_COMPLETE_IMH_DATA_VAR:
+1172   2                              l_us_data_counter = insertShortToArray(str_obdh_hk.us_imh_flag,l_uc_array_p,l_us_data_counter);
+1173   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_imh_retry_counter;
+1174   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_imh_acs_timeout_retry_counter;
+1175   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_imh_ads_timeout_retry_counter;
+1176   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_imh_wait_acs_time_s;
+1177   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_imh_wait_ads_time_s;
+1178   2                              l_us_data_counter = insertLongToArray(g_ul_idle_time_register,l_uc_array_p,l_us_data_counter);
+1179   2                              break;
+1180   2                      #endif
+1181   2                      #endif
+1182   2      
+1183   2                      #if (SAFE_MODE_HANDLER_ENABLE == 1)
+1184   2                      #if (ADCS_CMD_ENABLE == 1)
+1185   2                      #if (PWRS_CMD_ENABLE == 1)
+1186   2                      //Fill with complete safeModeHandler variables
+1187   2                      case DATA_CAT_COMPLETE_SMH_DATA_VAR:
+1188   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_smh_flag;
+1189   2                              l_us_data_counter = insertLongToArray(g_ul_smh_time_register,l_uc_array_p,l_us_data_counter);
+1190   2                              l_us_data_counter = insertLongToArray(g_ul_smh_saved_time,l_uc_array_p,l_us_data_counter);
+1191   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_soc_reading_when_entering_safe_mode;
+1192   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_soc_after_one_orbit_in_safe_mode;
+1193   2                              break;
+1194   2                      #endif
+1195   2                      #endif
+1196   2                      #endif
+1197   2      
+1198   2                      //Fill hold activation variables
+1199   2                      case DATA_CAT_HOLD_ACTIVATION:
+1200   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_data.uc_software_mode;
+1201   2                              break;
+1202   2      
+1203   2                      //Fill complete AX25 frame buffer
+1204   2                      case DATA_CAT_COMPLETE_AX25_FRAME_BUFFER:
+1205   2                              for (l_us_counter_i = 0; l_us_counter_i < AX25_BUFFER_SIZE; l_us_counter_i++)
+1206   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_ax25_message[l_us_counter_i];
+1207   2                              break;
+1208   2      
+1209   2                      //Fill with single data from a subsystem
+1210   2                      case DATA_CAT_SINGLE_SUBSYSTEM_DATA:
+1211   2                              for (l_us_counter_i = 0; l_us_counter_i < 4; l_us_counter_i++)
+1212   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_i2c_data_in[l_us_counter_i];
+1213   2                              break;
+1214   2      
+1215   2                      //Fill with acknowledgement message
+1216   2                      case DATA_CAT_ACK_MSG:
+1217   2                              *(l_uc_array_p + l_us_data_counter++) = GSCH_ACK_CHAR;
+1218   2                              l_us_data_counter = insertShortToArray(g_us_gsch_gs_cmd_crc,l_uc_array_p,l_us_data_counter);
+1219   2                              l_us_data_counter = insertShortToArray(g_us_gsch_error_code,l_uc_array_p,l_us_data_counter);
+1220   2                              break;
+1221   2      
+1222   2                      //Fill with error codes of scriptline items
+1223   2                      case DATA_CAT_SCRIPTLINE_ITEM_ERROR_CODES:
+1224   2                              l_us_data_counter = insertShortToArray(g_us_scriptline_timer_error_code,l_uc_array_p,l_us_data_counter)
+             -;
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 22  
+
+1225   2                              l_us_data_counter = insertShortToArray(g_us_scriptline_retry_counter_error_code,l_uc_array_p,l_us_data_
+             -counter);
+1226   2                              break;
+1227   2      
+1228   2                      //Fill with GSCH variables
+1229   2                      case DATA_CAT_GSCH_VAR:
+1230   2                              *(l_uc_array_p + l_us_data_counter++) = str_obdh_hk.uc_gsch_state;
+1231   2                              l_us_data_counter = insertShortToArray(g_us_gsch_error_code,l_uc_array_p,l_us_data_counter);
+1232   2                              l_us_data_counter = insertShortToArray(g_us_gsch_command_validation_error_code,l_uc_array_p,l_us_data_c
+             -ounter);
+1233   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_gsch_comm_retry_counter;
+1234   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_gsch_loading_retry_counter;
+1235   2                              l_us_data_counter = insertShortToArray(g_us_gsch_monitoring_transitional_period,l_uc_array_p,l_us_data_
+             -counter);
+1236   2                              l_us_data_counter = insertShortToArray(g_us_gsch_monitoring_period,l_uc_array_p,l_us_data_counter);
+1237   2                              l_us_data_counter = insertShortToArray(g_us_gsch_key,l_uc_array_p,l_us_data_counter);
+1238   2                              l_us_data_counter = insertShortToArray(g_us_gsch_answer_1,l_uc_array_p,l_us_data_counter);
+1239   2                              l_us_data_counter = insertShortToArray(g_us_gsch_answer_2,l_uc_array_p,l_us_data_counter);
+1240   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_gsch_gs_header;
+1241   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_gsch_gs_cmd_header;
+1242   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_gsch_gs_cmd_tail;
+1243   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_gsch_gs_arg_len;
+1244   2                              for (l_us_counter_i = 0; l_us_counter_i < MAX_GSCH_CMD_ARG_LEN; l_us_counter_i++)
+1245   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_gsch_gs_arg[l_us_counter_i];
+1246   2                              l_us_data_counter = insertShortToArray(g_us_gsch_gs_cmd_crc,l_uc_array_p,l_us_data_counter);
+1247   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_gsch_subsystem_to_load;
+1248   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_gsch_data_type_to_load;
+1249   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_gsch_sd_block_property;
+1250   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_gsch_no_of_loading;
+1251   2                              *(l_uc_array_p + l_us_data_counter++) = g_uc_gsch_sampling_step;
+1252   2                              for (l_us_counter_i = 0; l_us_counter_i < (MAX_SCHEDULER_ARG+SCHEDULER_NON_ARG_SIZE+2); l_us_counter_i+
+             -+)
+1253   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_gsch_sch_register[l_us_counter_i];
+1254   2                              l_us_data_counter = insertShortToArray(g_us_gsch_total_sending_time,l_uc_array_p,l_us_data_counter);
+1255   2                              break;
+1256   2      
+1257   2                      //Fill with GSCH generated key
+1258   2                      case DATA_CAT_GP_REQUEST_KEY:
+1259   2                              l_us_data_counter = insertShortToArray(g_us_gsch_key,l_uc_array_p,l_us_data_counter);
+1260   2                              break;
+1261   2      
+1262   2                      //Fill with datalog initial set
+1263   2                      case DATA_CAT_LOG_DATA_INIT_SET:
+1264   2                              g_ul = str_obdh_data.ul_log_data_start_time + SECONDS_FROM_TAI_TO_KILL_SWITCH_DEACTIVATION;
+1265   2                              for (l_us_counter_i = 0; l_us_counter_i < MAX_NO_OF_DATA_TYPE_LOGGED; l_us_counter_i++)
+1266   2                                      l_us_data_counter = insertShortToArray(str_obdh_par.us_log_data_id[l_us_counter_i],l_uc_array_p,l_us_d
+             -ata_counter);
+1267   2                              l_us_data_counter = insertLongToArray(g_ul,l_uc_array_p,l_us_data_counter);
+1268   2                              l_us_data_counter = insertShortToArray(str_obdh_data.us_log_data_duration_s,l_uc_array_p,l_us_data_coun
+             -ter);
+1269   2                              break;
+1270   2      
+1271   2                      //Fill with datalog set
+1272   2                      case DATA_CAT_LOG_DATA_SET:
+1273   2                              for (l_us_counter_i = 0; l_us_counter_i < LOG_DATA_SET_SIZE; l_us_counter_i++)
+1274   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_log_data_set[l_us_counter_i];              
+1275   2                              break;
+1276   2                      
+1277   2                      //Fill with log data variables
+1278   2                      case DATA_CAT_LOG_DATA_VAR:
+1279   2                              g_ul = str_obdh_data.ul_log_data_start_time + SECONDS_FROM_TAI_TO_KILL_SWITCH_DEACTIVATION;
+1280   2                              for (l_us_counter_i = 0; l_us_counter_i < MAX_NO_OF_DATA_TYPE_LOGGED; l_us_counter_i++)
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 23  
+
+1281   2                                      l_us_data_counter = insertShortToArray(str_obdh_par.us_log_data_id[l_us_counter_i],l_uc_array_p,l_us_d
+             -ata_counter);
+1282   2                              l_us_data_counter = insertLongToArray(g_ul,l_uc_array_p,l_us_data_counter);
+1283   2                              l_us_data_counter = insertShortToArray(str_obdh_data.us_log_data_duration_s,l_uc_array_p,l_us_data_coun
+             -ter);
+1284   2                              l_us_data_counter = insertShortToArray(g_us_log_data_elapsed_time_s,l_uc_array_p,l_us_data_counter);
+1285   2                              l_us_data_counter = insertShortToArray(g_us_log_data_buffer_index,l_uc_array_p,l_us_data_counter);
+1286   2                              l_us_data_counter = insertShortToArray(g_us_log_data_block_size,l_uc_array_p,l_us_data_counter);
+1287   2                              break;
+1288   2      
+1289   2                      //Fill with datalog buffer
+1290   2                      case DATA_CAT_LOG_DATA_BUFFER:
+1291   2                              for (l_us_counter_i = 0; l_us_counter_i < g_us_log_data_buffer_index; l_us_counter_i++)
+1292   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_log_data_buffer[l_us_counter_i];           
+1293   2                              break;
+1294   2      
+1295   2                      //Fill with eventlog buffer
+1296   2                      //dec22_yc
+1297   2                      case DATA_CAT_EVENTLOG_DATA_BUFFER:
+1298   2                              for (l_us_counter_i = 0; l_us_counter_i < EVENTLOG_DATA_BUFFER_SIZE; l_us_counter_i++)
+1299   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_eventlog_data_buffer[l_us_counter_i];              
+1300   2                              break;
+1301   2      
+1302   2                      //Fill with filled schedule
+1303   2                      case DATA_CAT_FILLED_SCHEDULE:
+1304   2                              l_uc_counter_k = 0;
+1305   2                              //Because the 1st byte of the first frame, had this been used for sending would be filled by scheduler 
+             -size (one byte),
+1306   2                              //there is -1 value in the numerator. (20120328)
+1307   2                              l_uc_max_counter_k = (MAX_AX25_CONTENT_SIZE-ACK_MSG_SIZE-1)/(SCHEDULER_NON_ARG_SIZE+MAX_SCHEDULER_ARG);
+1308   2                              while (l_uc_counter_k < l_uc_max_counter_k && (g_uc_schedule_sent_counter+l_uc_counter_k) < str_obdh_hk
+             -.uc_scheduler_block_size){
+1309   3                                      g_ul = str_scheduler.ul_scheduled_time[str_scheduler.uc_reindexing[g_uc_schedule_sent_counter+l_uc_cou
+             -nter_k]] + SECONDS_FROM_TAI_TO_KILL_SWITCH_DEACTIVATION;
+1310   3                                      l_us_data_counter = insertLongToArray(g_ul,l_uc_array_p,l_us_data_counter);
+1311   3                                      l_us_data_counter = insertShortToArray(str_scheduler.us_cmd[str_scheduler.uc_reindexing[g_uc_schedule_
+             -sent_counter+l_uc_counter_k]],l_uc_array_p,l_us_data_counter);
+1312   3                                      *(l_uc_array_p + l_us_data_counter++) = str_scheduler.uc_arg_length[str_scheduler.uc_reindexing[g_uc_s
+             -chedule_sent_counter+l_uc_counter_k]];
+1313   3                                      for (l_us_counter_j = 0; l_us_counter_j < MAX_SCHEDULER_ARG; l_us_counter_j++)
+1314   3                                              *(l_uc_array_p + l_us_data_counter++) = str_scheduler.uc_arg[str_scheduler.uc_reindexing[g_uc_schedul
+             -e_sent_counter+l_uc_counter_k]][l_us_counter_j];                              
+1315   3                                      l_uc_counter_k++;
+1316   3                              }
+1317   2                              if (l_us_fill_argument)
+1318   2                                      g_uc_schedule_sent_counter += l_uc_counter_k;
+1319   2                              break;
+1320   2                      
+1321   2                      //Fill with SD header meaningful (reduced) data from the SD card buffer
+1322   2                      case DATA_CAT_SD_HEADER_INFO_SENT:
+1323   2                              //Get the original block address
+1324   2                              g_ul = uchar2ulong(0x00,g_uc_sd_data_buffer[19],g_uc_sd_data_buffer[20],g_uc_sd_data_buffer[21]);
+1325   2      
+1326   2                              //Limit the block address to SD card block limit
+1327   2                              if (g_ul > SD_BP_MAX)
+1328   2                                      g_ul = SD_BP_MAX;
+1329   2      
+1330   2                              //Get what msg ends of the SD card data
+1331   2                              l_us_dummy_var = (unsigned short)(g_uc_sd_data_buffer[6] << 8) + g_uc_sd_data_buffer[7];
+1332   2      
+1333   2                              //Adjust the size
+1334   2                              //Completed data size is (l_us_dummy_var+3) , including CRC16 bytes
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 24  
+
+1335   2                              //Original data size should be (l_us_dummy_var+1), excluding CRC16 bytes of the SD card.
+1336   2                              //The data being sent down omit CRC16 bytes and unecessary info
+1337   2                              //Thus, it is (l_us_dummy_var+1) - SD_CARD_HEADER_SIZE + 5, since only 5 bytes of the info are sent
+1338   2                              l_us_dummy_var += 1;
+1339   2                              l_us_dummy_var -= (SD_CARD_HEADER_SIZE-5);
+1340   2      
+1341   2                              //Now the maximum value of the data size should be MAX_SD_CARD_BLOCK_CONTENT_SIZE+5
+1342   2                              //Limit the maximum size
+1343   2                              if (l_us_dummy_var > (MAX_SD_CARD_BLOCK_CONTENT_SIZE+5))
+1344   2                                      l_us_dummy_var = MAX_SD_CARD_BLOCK_CONTENT_SIZE+5;
+1345   2      
+1346   2                              //Insert the last three
+1347   2                              *(l_uc_array_p + l_us_data_counter++) = g_ul >> 16;
+1348   2                              *(l_uc_array_p + l_us_data_counter++) = g_ul >> 8;
+1349   2                              *(l_uc_array_p + l_us_data_counter++) = g_ul;
+1350   2                              *(l_uc_array_p + l_us_data_counter++) = l_us_dummy_var >> 8;
+1351   2                              *(l_uc_array_p + l_us_data_counter++) = l_us_dummy_var;
+1352   2                              break;
+1353   2      
+1354   2                      //Fill with satellite revolution no in float
+1355   2                      case DATA_CAT_SAT_REV_NO_IN_FLOAT:
+1356   2                              g_f = str_obdh_data.us_current_rev_no;
+1357   2                              g_f += (float)str_obdh_data.us_rev_offset_time/(float)str_obdh_par.us_rev_time_s;
+1358   2                              l_us_data_counter = insertFloatToArray(g_f,l_uc_array_p,l_us_data_counter);
+1359   2                              break;
+1360   2      
+1361   2                      //Fill with filled AX25 frame package
+1362   2                      case DATA_CAT_FILLED_AX25_FRAME:
+1363   2                              //Get the length of the frame (excluding CRC16 bytes)
+1364   2                              l_us_dummy_var = g_uc_ax25_message[4];
+1365   2      
+1366   2                              //Length limit check
+1367   2                              if (l_us_dummy_var > (AX25_BUFFER_SIZE-2)) l_us_dummy_var = (AX25_BUFFER_SIZE-2);
+1368   2      
+1369   2                              //Fill the data
+1370   2                              for (l_us_counter_i = 0; l_us_counter_i < l_us_dummy_var; l_us_counter_i++)
+1371   2                                      *(l_uc_array_p + l_us_data_counter++) = g_uc_ax25_message[l_us_counter_i];
+1372   2                              break;
+1373   2      
+1374   2                      //Fill with function module error code
+1375   2                      case DATA_CAT_FUNCTION_MODULE_ERROR_CODE:
+1376   2                              l_us_data_counter = insertShortToArray(g_us_function_module_error_code,l_uc_array_p,l_us_data_counter);
+1377   2                              break;
+1378   2      
+1379   2                      #endif
+1380   2      
+1381   2                      //Error in calling this command
+1382   2                      default:
+1383   2                              l_us_data_counter = insertShortToArray(EC_INVALID_READING_DATA_REQUEST,l_uc_array_p,l_us_data_counter);
+1384   2                              break;
+1385   2              }
+1386   1              
+1387   1              return l_us_data_counter;
+1388   1      }
+1389          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   9824    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----      96
+   PDATA SIZE       =   ----    ----
+C51 COMPILER V9.02   LUXP_ADD                                                              01/09/2014 12:21:13 PAGE 25  
+
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  5 WARNING(S),  0 ERROR(S)

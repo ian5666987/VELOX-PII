@@ -1,0 +1,405 @@
+C51 COMPILER V9.02   LUXP_SCHEDULE                                                         01/09/2014 12:21:20 PAGE 1   
+
+
+C51 COMPILER V9.02, COMPILATION OF MODULE LUXP_SCHEDULE
+NO OBJECT MODULE REQUESTED
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE luxp_schedule.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+*** WARNING C500 IN LINE 1 OF LUXP_SCHEDULE.C: LICENSE ERROR (R20D: CONTENT ERROR IN FLF FILE)
+
+   1          //------------------------------------------------------------------------------------
+   2          // Luxp_schedule.c
+   3          //------------------------------------------------------------------------------------
+   4          // Copyright (C) 2013 Nanyang Technological University.
+   5          //
+   6          // AUTH: IAN
+   7          // DATE: 03 APR 2013
+   8          //
+   9          // The program Luxp_schedule.c will be downloaded to the Pumpkin Motherboard with 
+  10          // C8051F120 uC as part of the VELOX-P Pico-Satellite Flight Software. 
+  11          //
+  12          // This file contains all scheduling functions of the Flight Software
+  13          //
+  14          //------------------------------------------------------------------------------------
+  15          // Overall functional test status
+  16          //------------------------------------------------------------------------------------
+  17          // Completely untested
+  18          //
+  19          //------------------------------------------------------------------------------------
+  20          // Overall documentation status
+  21          //------------------------------------------------------------------------------------
+  22          // Minimally documented
+  23          //------------------------------------------------------------------------------------
+  24          
+  25          //------------------------------------------------------------------------------------
+  26          // List of functions                            | Test status                                   | Documentation
+  27          //------------------------------------------------------------------------------------
+  28          // NA                                                           | NA                                                    | NA
+  29          //------------------------------------------------------------------------------------
+  30          
+  31          #include <luxp_schedule.h>
+  32          
+  33          #if (SATELLITE_SCHEDULE_HANDLER_ENABLE == 1)
+  34          //------------------------------------------------------------------------------------
+  35          // Schedule Functions
+  36          //------------------------------------------------------------------------------------
+  37          
+  38          //------------------------------------------------------------------------------------
+  39          // Rearrange satellite's schedule
+  40          //------------------------------------------------------------------------------------
+  41          void rearrangeSchedule (void)
+  42          {
+  43   1          unsigned char l_uc_i;
+  44   1          unsigned char l_uc_swap_flag;
+  45   1          
+  46   1          if (str_obdh_hk.uc_scheduler_block_size){
+  47   2                      do {
+  48   3                      l_uc_swap_flag = 0;
+  49   3                      for (l_uc_i = 0; l_uc_i < str_obdh_hk.uc_scheduler_block_size-1; l_uc_i++){
+  50   4                          if (str_scheduler.ul_scheduled_time[str_scheduler.uc_reindexing[l_uc_i]] > str_scheduler.ul_s
+             -cheduled_time[str_scheduler.uc_reindexing[l_uc_i+1]]){
+  51   5                             swapScheduleIndex(l_uc_i,l_uc_i+1);
+  52   5                             l_uc_swap_flag = 1;
+  53   5                          }
+C51 COMPILER V9.02   LUXP_SCHEDULE                                                         01/09/2014 12:21:20 PAGE 2   
+
+  54   4                      }
+  55   3                  }while (l_uc_swap_flag);
+  56   2              }
+  57   1      }
+  58          
+  59          //------------------------------------------------------------------------------------
+  60          // Swap schedule index
+  61          //------------------------------------------------------------------------------------
+  62          void swapScheduleIndex (unsigned char l_uc_index_1, unsigned char l_uc_index_2)
+  63          {
+  64   1          unsigned char l_uc_temp_index;
+  65   1          
+  66   1          l_uc_temp_index                                             = str_scheduler.uc_reindexing[l_uc_index_1];
+  67   1          str_scheduler.uc_reindexing[l_uc_index_1]   = str_scheduler.uc_reindexing[l_uc_index_2];
+  68   1          str_scheduler.uc_reindexing[l_uc_index_2]   = l_uc_temp_index;
+  69   1      }
+  70          
+  71          //------------------------------------------------------------------------------------
+  72          // Remove schedule
+  73          //------------------------------------------------------------------------------------
+  74          //      The valid removal start point here is one (1) or above, not (0) or above
+  75          //      since the starting point of the schedule is declared as one (1), not zero (0)
+  76          //------------------------------------------------------------------------------------
+  77          void removeSchedule (unsigned char l_uc_removal_start_point, unsigned char l_uc_removal_end_point)
+  78          {
+  79   1          unsigned char l_uc_index_value_removed;
+  80   1          unsigned char l_uc_i;
+  81   1          unsigned char l_uc_j;
+  82   1              unsigned char l_uc_no_of_to_be_removed_schedule;
+  83   1      
+  84   1              //Prevent user input error
+  85   1              if (l_uc_removal_end_point >= l_uc_removal_start_point){        
+  86   2                      //Set the number of removed schedule as what is being input
+  87   2                      l_uc_no_of_to_be_removed_schedule = l_uc_removal_end_point-l_uc_removal_start_point+1;
+  88   2              
+  89   2                      //Check if the removal starting point is less than or equal to the scheduler's size
+  90   2                      //And whether there is still schedule to be removed
+  91   2                      while (l_uc_removal_start_point <= str_obdh_hk.uc_scheduler_block_size && l_uc_no_of_to_be_removed_sched
+             -ule && l_uc_removal_start_point != 0){    
+  92   3                          //Set the index value removed as stated by the starting point
+  93   3                              l_uc_index_value_removed = str_scheduler.uc_reindexing[l_uc_removal_start_point-1];
+  94   3                  
+  95   3                          //Value must be raised up from the removed index onwards
+  96   3                          for (l_uc_i = l_uc_index_value_removed; l_uc_i < str_obdh_hk.uc_scheduler_block_size-1; l_uc_i++){
+  97   4                              str_scheduler.ul_scheduled_time[l_uc_i] = str_scheduler.ul_scheduled_time[l_uc_i+1];
+  98   4                                      str_scheduler.us_cmd[l_uc_i]                    = str_scheduler.us_cmd[l_uc_i+1];
+  99   4                                      str_scheduler.uc_arg_length[l_uc_i]     = str_scheduler.uc_arg_length[l_uc_i+1];
+ 100   4                                      for (l_uc_j = 0; l_uc_j < MAX_SCHEDULER_ARG; l_uc_j++)
+ 101   4                                              str_scheduler.uc_arg[l_uc_i][l_uc_j] = str_scheduler.uc_arg[l_uc_i+1][l_uc_j];
+ 102   4                              }
+ 103   3                      
+ 104   3                          //Re-indexing must be raised up from l_uc_removal_start_point onwards
+ 105   3                          for (l_uc_i = (l_uc_removal_start_point-1); l_uc_i < str_obdh_hk.uc_scheduler_block_size-1; l_uc_i++
+             -)
+ 106   3                              str_scheduler.uc_reindexing[l_uc_i] = str_scheduler.uc_reindexing[l_uc_i+1];
+ 107   3              
+ 108   3                              //Checked from the beginning, whenever there is index which is greater than what is removed, 
+ 109   3                              //the index will be minus by 1
+ 110   3                              for (l_uc_i = 0; l_uc_i < str_obdh_hk.uc_scheduler_block_size-1; l_uc_i++)
+ 111   3                              if (str_scheduler.uc_reindexing[l_uc_i] > l_uc_index_value_removed)
+ 112   3                                  str_scheduler.uc_reindexing[l_uc_i]--;
+ 113   3                          
+C51 COMPILER V9.02   LUXP_SCHEDULE                                                         01/09/2014 12:21:20 PAGE 3   
+
+ 114   3                          //Size is reduced by one
+ 115   3                          str_obdh_hk.uc_scheduler_block_size--;
+ 116   3                              l_uc_no_of_to_be_removed_schedule--;
+ 117   3                      
+ 118   3                          //Delete the outdated re-indexing and the last schedule
+ 119   3                          str_scheduler.uc_reindexing[str_obdh_hk.uc_scheduler_block_size]            = 0;
+ 120   3                          str_scheduler.ul_scheduled_time[str_obdh_hk.uc_scheduler_block_size]        = 0;
+ 121   3                              str_scheduler.us_cmd[str_obdh_hk.uc_scheduler_block_size]                               = 0;
+ 122   3                              str_scheduler.uc_arg_length[str_obdh_hk.uc_scheduler_block_size]                = 0;
+ 123   3                              for (l_uc_j = 0; l_uc_j < MAX_SCHEDULER_ARG; l_uc_j++)
+ 124   3                                      str_scheduler.uc_arg[str_obdh_hk.uc_scheduler_block_size][l_uc_j]       = 0;
+ 125   3                      }
+ 126   2              }    
+ 127   1      }
+ 128          
+ 129          //------------------------------------------------------------------------------------
+ 130          // To add new schedule in the bottom of the block
+ 131          //------------------------------------------------------------------------------------
+ 132          unsigned short addNewSchedule (void)
+ 133          {
+ 134   1              unsigned short l_us_error_code = EC_INIT;
+ 135   1              unsigned char l_uc_i;
+ 136   1      
+ 137   1              //Invalid argument length will be rejected, this is to prevent an undesired scheduled event
+ 138   1              if (str_obdh_hk.uc_scheduler_block_size < SCHEDULER_BLOCK_SIZE){
+ 139   2                      if (str_scheduler.uc_arg_length_register <= MAX_SCHEDULER_ARG){
+ 140   3                              if (str_scheduler.ul_scheduled_time_register >= str_obdh_data.ul_obc_time_s){
+ 141   4                                      //Give the new schedule last index first
+ 142   4                                      str_scheduler.uc_reindexing[str_obdh_hk.uc_scheduler_block_size]                = str_obdh_hk.uc_scheduler_block_si
+             -ze;
+ 143   4                              
+ 144   4                                      //Add the scheduled item
+ 145   4                                      str_scheduler.ul_scheduled_time[str_obdh_hk.uc_scheduler_block_size]    = str_scheduler.ul_scheduled_tim
+             -e_register;
+ 146   4                                      str_scheduler.us_cmd[str_obdh_hk.uc_scheduler_block_size]                               = str_scheduler.us_cmd_register;
+ 147   4                                      str_scheduler.uc_arg_length[str_obdh_hk.uc_scheduler_block_size]                = str_scheduler.uc_arg_length_regi
+             -ster;
+ 148   4                                      for (l_uc_i = 0; l_uc_i < MAX_SCHEDULER_ARG; l_uc_i++)
+ 149   4                                              str_scheduler.uc_arg[str_obdh_hk.uc_scheduler_block_size][l_uc_i]       = str_scheduler.uc_arg_register[l_
+             -uc_i];
+ 150   4                              
+ 151   4                                  //Increase scheduler block size
+ 152   4                                      str_obdh_hk.uc_scheduler_block_size++;
+ 153   4                              
+ 154   4                                      //The scheduler lost its arrangement whenever a new schedule is added
+ 155   4                                      g_uc_evha_flag &= ~EVENT_FLAG_SCHEDULE_IS_REARRANGED;
+ 156   4                                      
+ 157   4                                      //Return successful
+ 158   4                                      l_us_error_code = EC_SUCCESSFUL;
+ 159   4                              }
+ 160   3                              else l_us_error_code = EC_SCHEDULED_TIME_HAS_ALREADY_PASSED;
+ 161   3                      }
+ 162   2                      else l_us_error_code = EC_SCHEDULE_ARGUMENT_TOO_LONG;
+ 163   2              }
+ 164   1              else l_us_error_code = EC_SCHEDULE_FULL;
+ 165   1      
+ 166   1              #if (EVENT_HANDLER_ENABLE == 1)
+ 167   1              #if (STORING_ENABLE == 1)
+ 168   1          eventHandler(EV_ADD_SCHEDULE+l_us_error_code,
+ 169   1                                      str_scheduler.us_cmd_register >> 8,str_scheduler.us_cmd_register,
+ 170   1                                              str_scheduler.uc_arg_register[0],
+ 171   1                                              str_scheduler.uc_arg_register[1],
+C51 COMPILER V9.02   LUXP_SCHEDULE                                                         01/09/2014 12:21:20 PAGE 4   
+
+ 172   1                                              str_scheduler.uc_arg_register[2],
+ 173   1                                              str_scheduler.uc_arg_register[3]);      //yc added 20120224
+ 174   1              #endif
+ 175   1              #endif
+ 176   1      
+ 177   1      
+ 178   1              return l_us_error_code;
+ 179   1      }
+ 180          
+ 181          //------------------------------------------------------------------------------------
+ 182          // To insert schedule to turn ON ADCS on the scheduled time.
+ 183          // ADS is turned ON first, then ACS TIME_DELAY_ACS_TO_ON_AFTER_ADS_ON_S seconds later.
+ 184          //------------------------------------------------------------------------------------
+ 185          unsigned short scheduleTurnOnADCS (unsigned long l_ul_scheduled_time)
+ 186          {
+ 187   1              unsigned short l_us_error_code = EC_INIT;
+ 188   1      
+ 189   1              //It needs at least two slots of schedule to turn ON ADCS
+ 190   1              if (str_obdh_hk.uc_scheduler_block_size <= (SCHEDULER_BLOCK_SIZE-2)){
+ 191   2                      //Turn ON ADS first
+ 192   2                      l_us_error_code = scheduleSingleChannel(ADS_CHANNEL,CHANNEL_ON,l_ul_scheduled_time);
+ 193   2              
+ 194   2                      //If there is an error code, it must be because the scheduled time has already passed
+ 195   2                      if (l_us_error_code) return l_us_error_code;
+ 196   2              
+ 197   2                      //Turn ON ACS TIME_DELAY_ACS_TO_ON_AFTER_ADS_ON_S seconds after
+ 198   2                      l_us_error_code = scheduleSingleChannel(ACS_CHANNEL,CHANNEL_ON,l_ul_scheduled_time+TIME_DELAY_ACS_TO_ON_
+             -AFTER_ADS_ON_S);      
+ 199   2              }
+ 200   1              else l_us_error_code = EC_NOT_ENOUGH_SCHEDULE_SLOT;
+ 201   1      
+ 202   1              return l_us_error_code;
+ 203   1      }
+ 204          
+ 205          //------------------------------------------------------------------------------------
+ 206          // To schedule to turn single channel to a desired state on a scheduled time.
+ 207          //------------------------------------------------------------------------------------
+ 208          unsigned short scheduleSingleChannel (unsigned char l_uc_channel, unsigned char l_uc_state, unsigned long 
+             -l_ul_scheduled_time)
+ 209          {
+ 210   1              unsigned short l_us_error_code = EC_INIT;
+ 211   1              unsigned char l_uc_i;
+ 212   1      
+ 213   1              //Turn ON/OFF desired channel
+ 214   1              str_scheduler.ul_scheduled_time_register        = l_ul_scheduled_time;
+ 215   1              str_scheduler.us_cmd_register                           = (unsigned short)(PWRS_ADDR << 8) + PWRS_I2C_SET_SINGLE_OUTPUT;
+ 216   1              str_scheduler.uc_arg_length_register            = PWRS_I2C_SET_SINGLE_OUTPUT_WR-1;
+ 217   1              str_scheduler.uc_arg_register[0]                        = l_uc_channel;
+ 218   1              str_scheduler.uc_arg_register[1]                        = l_uc_state;
+ 219   1              str_scheduler.uc_arg_register[2]                        = TIME_LIMIT_SET_RESET_CHANNEL_MS >> 8;
+ 220   1              str_scheduler.uc_arg_register[3]                        = TIME_LIMIT_SET_RESET_CHANNEL_MS;
+ 221   1              for (l_uc_i = str_scheduler.uc_arg_length_register; l_uc_i < MAX_SCHEDULER_ARG; l_uc_i++)
+ 222   1                      str_scheduler.uc_arg_register[l_uc_i]   = 0;
+ 223   1              l_us_error_code = addNewSchedule();
+ 224   1      
+ 225   1              return l_us_error_code;
+ 226   1      }
+ 227          
+ 228          #if (GROUND_STATION_COMMAND_HANDLER_ENABLE == 1)
+ 229          #if (ISIS_CMD_ENABLE == 1)
+ 230          //------------------------------------------------------------------------------------
+ 231          // To schedule satellite to enter mission mode (the start time is in OBC time, not TAI)
+C51 COMPILER V9.02   LUXP_SCHEDULE                                                         01/09/2014 12:21:20 PAGE 5   
+
+ 232          //------------------------------------------------------------------------------------
+ 233          unsigned short scheduleMissionMode (unsigned long l_ul_start_time, unsigned short l_us_elapsed_time)
+ 234          {
+ 235   1              unsigned short l_us_error_code = EC_INIT;
+ 236   1              unsigned char l_uc_i;
+ 237   1      
+ 238   1              str_scheduler.ul_scheduled_time_register        = l_ul_start_time;
+ 239   1              str_scheduler.us_cmd_register                           = (unsigned short)(OBDH_ADDR << 8) + OBDH_CMD_ENTER_MISSION_MODE;
+ 240   1              str_scheduler.uc_arg_length_register            = 2;
+ 241   1              str_scheduler.uc_arg_register[0]                        = l_us_elapsed_time >> 8;
+ 242   1              str_scheduler.uc_arg_register[1]                        = l_us_elapsed_time;
+ 243   1              for (l_uc_i = str_scheduler.uc_arg_length_register; l_uc_i < MAX_SCHEDULER_ARG; l_uc_i++)
+ 244   1                      str_scheduler.uc_arg_register[l_uc_i]   = 0;
+ 245   1              l_us_error_code = addNewSchedule();
+ 246   1      
+ 247   1              return l_us_error_code;
+ 248   1      }
+ 249          //------------------------------------------------------------------------------------
+ 250          // To insert schedule for logging data mission
+ 251          //------------------------------------------------------------------------------------
+ 252          void scheduleLogData (void)
+ 253          {
+ 254   1              unsigned char l_uc_i;
+ 255   1      
+ 256   1              //Insert schedule to start the log data task on the scheduled time
+ 257   1              str_scheduler.ul_scheduled_time_register        = uchar2ulong(g_uc_gsch_gs_arg[0],g_uc_gsch_gs_arg[1],g_uc_gsch
+             -_gs_arg[2],g_uc_gsch_gs_arg[3]) - SECONDS_FROM_TAI_TO_KILL_SWITCH_DEACTIVATION;
+ 258   1              str_scheduler.us_cmd_register                           = (unsigned short)(OBDH_ADDR << 8) + OBDH_CMD_COMMAND_TASK;
+ 259   1              str_scheduler.uc_arg_length_register            = 2;
+ 260   1              str_scheduler.uc_arg_register[0]                        = TASK_LOG_ST_DATA;
+ 261   1              str_scheduler.uc_arg_register[1]                        = TASK_CMD_RESTART;
+ 262   1              for (l_uc_i = str_scheduler.uc_arg_length_register; l_uc_i < MAX_SCHEDULER_ARG; l_uc_i++)
+ 263   1                      str_scheduler.uc_arg_register[l_uc_i]   = 0;
+ 264   1              g_us_gsch_error_code = addNewSchedule();
+ 265   1      
+ 266   1              //Insert the wanted start time and duration to log data
+ 267   1              str_obdh_data.ul_log_data_start_time = str_scheduler.ul_scheduled_time_register;
+ 268   1              str_obdh_data.us_log_data_duration_s = (unsigned short)(g_uc_gsch_gs_arg[4] << 8) + g_uc_gsch_gs_arg[5];
+ 269   1      
+ 270   1              //Limit the wanted duration to log data
+ 271   1              if (str_obdh_data.us_log_data_duration_s > TIME_LIMIT_LOG_DATA_S)
+ 272   1                      str_obdh_data.us_log_data_duration_s = TIME_LIMIT_LOG_DATA_S;
+ 273   1      }
+ 274          
+ 275          //------------------------------------------------------------------------------------
+ 276          // To insert schedule sun tracking mission
+ 277          //------------------------------------------------------------------------------------
+ 278          void scheduleSunTracking (void)
+ 279          {
+ 280   1              unsigned char l_uc_i;
+ 281   1      
+ 282   1              //Make use of global multipurpose variable to divide elapsed time for ADCS by 10
+ 283   1              g_us = ((unsigned short)(g_uc_gsch_gs_arg[4] << 8) + g_uc_gsch_gs_arg[5])/10;
+ 284   1      
+ 285   1              //Insert schedule to start the wanted task on the scheduled time +20s
+ 286   1              str_scheduler.ul_scheduled_time_register        = uchar2ulong(g_uc_gsch_gs_arg[0],g_uc_gsch_gs_arg[1],g_uc_gsch
+             -_gs_arg[2],g_uc_gsch_gs_arg[3])-SECONDS_FROM_TAI_TO_KILL_SWITCH_DEACTIVATION+20;
+ 287   1              str_scheduler.us_cmd_register                           = (unsigned short)(ADCS_ADDR << 8) + ADCS_I2C_SET_MODE;
+ 288   1              str_scheduler.uc_arg_length_register            = ADCS_I2C_SET_MODE_WR-1;
+ 289   1              str_scheduler.uc_arg_register[0]                        = ADCS_MODE_SUN_TRACK;
+ 290   1              str_scheduler.uc_arg_register[1]                        = g_us >> 8;
+ 291   1              str_scheduler.uc_arg_register[2]                        = g_us;
+C51 COMPILER V9.02   LUXP_SCHEDULE                                                         01/09/2014 12:21:20 PAGE 6   
+
+ 292   1              for (l_uc_i = str_scheduler.uc_arg_length_register; l_uc_i < MAX_SCHEDULER_ARG; l_uc_i++)
+ 293   1                      str_scheduler.uc_arg_register[l_uc_i]   = 0;
+ 294   1              g_us_gsch_error_code = addNewSchedule();
+ 295   1      }
+ 296          #endif
+ 297          #endif
+ 298          
+ 299          #if (EXTRA_ENABLE == 1)
+ 300          //------------------------------------------------------------------------------------
+ 301          // To schedule to reset PWRS/OBDH within 50ms
+ 302          //------------------------------------------------------------------------------------
+ 303          unsigned short scheduleResetPWRSOBDH (unsigned long l_ul_scheduled_time, unsigned char l_uc_subsystem)
+ 304          {
+ 305   1              unsigned short l_us_error_code = EC_INIT;
+ 306   1              unsigned char l_uc_i;
+ 307   1      
+ 308   1              //Schedule to turn ON/OFF PWRS/OBDH
+ 309   1              //Ian (2012-05-15): it is noted that in the final implementations, l_ul_scheduled_time = g_ul for all cas
+             -es.
+ 310   1              str_scheduler.ul_scheduled_time_register        = l_ul_scheduled_time;
+ 311   1      
+ 312   1              //Check which subsystem to reset
+ 313   1              if (l_uc_subsystem == PWRS_ADDR){
+ 314   2                      str_scheduler.us_cmd_register                   = (unsigned short)(PWRS_ADDR << 8) + PWRS_I2C_RESET_PWRS;
+ 315   2                      str_scheduler.uc_arg_length_register    = PWRS_I2C_RESET_PWRS_WR-1;
+ 316   2              }
+ 317   1              else if (l_uc_subsystem == OBDH_ADDR){
+ 318   2                      //Ian (2012-05-15): it is confirmed that PWRS_ADDR is to be written here instead of OBDH_ADDR.
+ 319   2                      //                                      because we want to use PWRS command to reset OBDH.
+ 320   2                      str_scheduler.us_cmd_register                   = (unsigned short)(PWRS_ADDR << 8) + PWRS_I2C_RESET_OBDH;
+ 321   2                      str_scheduler.uc_arg_length_register    = PWRS_I2C_RESET_OBDH_WR-1;
+ 322   2              }
+ 323   1      
+ 324   1              str_scheduler.uc_arg_register[0]                        = TIME_LIMIT_SET_RESET_CHANNEL_MS >> 8;
+ 325   1              str_scheduler.uc_arg_register[1]                        = TIME_LIMIT_SET_RESET_CHANNEL_MS;
+ 326   1              for (l_uc_i = str_scheduler.uc_arg_length_register; l_uc_i < MAX_SCHEDULER_ARG; l_uc_i++)
+ 327   1                      str_scheduler.uc_arg_register[l_uc_i] = 0;
+ 328   1              l_us_error_code = addNewSchedule();
+ 329   1      
+ 330   1              return l_us_error_code;
+ 331   1      }
+ 332          
+ 333          //------------------------------------------------------------------------------------
+ 334          // To schedule PWRS to turn OFF all subsystems at once
+ 335          //------------------------------------------------------------------------------------
+ 336          unsigned short scheduleOffAllSubsystems (unsigned long l_ul_scheduled_time)
+ 337          {
+ 338   1              unsigned short l_us_error_code = EC_INIT;
+ 339   1              unsigned char l_uc_i;
+ 340   1      
+ 341   1              //Schedule to turn OFF all subsystems at once
+ 342   1              str_scheduler.ul_scheduled_time_register        = l_ul_scheduled_time;
+ 343   1      
+ 344   1              //Check which subsystem to reset
+ 345   1              str_scheduler.us_cmd_register                           = (unsigned short)(PWRS_ADDR << 8) + PWRS_I2C_SET_OUTPUT;
+ 346   1              str_scheduler.uc_arg_length_register            = PWRS_I2C_SET_OUTPUT_WR-1;
+ 347   1              str_scheduler.uc_arg_register[0]                        = 0;
+ 348   1              for (l_uc_i = str_scheduler.uc_arg_length_register; l_uc_i < MAX_SCHEDULER_ARG; l_uc_i++)
+ 349   1                      str_scheduler.uc_arg_register[l_uc_i] = 0;
+ 350   1              l_us_error_code = addNewSchedule();
+ 351   1      
+ 352   1              return l_us_error_code;
+C51 COMPILER V9.02   LUXP_SCHEDULE                                                         01/09/2014 12:21:20 PAGE 7   
+
+ 353   1      }
+ 354          #endif
+ 355          #endif
+ 356          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1372    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----      27
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

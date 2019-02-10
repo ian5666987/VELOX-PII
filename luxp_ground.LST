@@ -1,0 +1,722 @@
+C51 COMPILER V9.02   LUXP_GROUND                                                           01/09/2014 12:21:18 PAGE 1   
+
+
+C51 COMPILER V9.02, COMPILATION OF MODULE LUXP_GROUND
+NO OBJECT MODULE REQUESTED
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE luxp_ground.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+*** WARNING C500 IN LINE 1 OF LUXP_GROUND.C: LICENSE ERROR (R20D: CONTENT ERROR IN FLF FILE)
+
+   1          //------------------------------------------------------------------------------------
+   2          // Luxp_ground.c
+   3          //------------------------------------------------------------------------------------
+   4          // Copyright (C) 2013 Nanyang Technological University.
+   5          //
+   6          // AUTH: IAN
+   7          // DATE: 03 APR 2013
+   8          //
+   9          // The program Luxp_ground.c will be downloaded to the Pumpkin Motherboard with 
+  10          // C8051F120 uC as part of the VELOX-P Pico-Satellite Flight Software. 
+  11          //
+  12          // This file contains all task functions of the Flight Software
+  13          //
+  14          //------------------------------------------------------------------------------------
+  15          // Overall functional test status
+  16          //------------------------------------------------------------------------------------
+  17          // Completely untested
+  18          //
+  19          //------------------------------------------------------------------------------------
+  20          // Overall documentation status
+  21          //------------------------------------------------------------------------------------
+  22          // Minimally documented
+  23          //------------------------------------------------------------------------------------
+  24          
+  25          //------------------------------------------------------------------------------------
+  26          // List of functions                            | Test status                                   | Documentation
+  27          //------------------------------------------------------------------------------------
+  28          // NA                                                           | NA                                                    | NA
+  29          //------------------------------------------------------------------------------------
+  30          
+  31          #include <luxp_ground.h>
+  32          
+  33          #if (GROUND_STATION_COMMAND_HANDLER_ENABLE == 1)
+  34          #if (ISIS_CMD_ENABLE == 1)
+  35          //------------------------------------------------------------------------------------
+  36          // To update OBC time and RTC clock using GDSN time
+  37          //------------------------------------------------------------------------------------
+  38          void groundUpdateTime (unsigned long l_ul_tai_time)
+  39          {
+  40   1              str_obdh_data.ul_gs_ref_time_s = l_ul_tai_time-SECONDS_FROM_TAI_TO_KILL_SWITCH_DEACTIVATION;
+  41   1              str_obdh_data.ul_obc_time_s = str_obdh_data.ul_gs_ref_time_s;
+  42   1              #if (TIME_ENABLE == 1)
+  43   1              #if (RTC_CMD_ENABLE == 1)
+  44   1              //Redundancy deleted
+  45   1              sec2DateUpdateFromRef(str_obdh_data.ul_gs_ref_time_s);
+  46   1              #if (DEBUGGING_FEATURE == 1)
+  47   1              g_us_latest_gdsn_to_rtc_update_ec = rtcUpdateDate(0,str_date_update.uc_day,str_date_update.uc_month,str_d
+             -ate_update.uc_year,str_date_update.uc_hour,str_date_update.uc_min,str_date_update.uc_s,DEBUGGING_FEATURE);
+  48   1              #else
+                      g_us_latest_gdsn_to_rtc_update_ec = rtcUpdateDate(0,str_date_update.uc_day,str_date_update.uc_month,str_d
+             -ate_update.uc_year,str_date_update.uc_hour,str_date_update.uc_min,str_date_update.uc_s);
+                      #endif
+  51   1              #else
+                      g_us_latest_gdsn_to_rtc_update_ec = EC_RTC_CMD_DISABLED;
+C51 COMPILER V9.02   LUXP_GROUND                                                           01/09/2014 12:21:18 PAGE 2   
+
+                      #endif
+  54   1              #endif
+  55   1      }
+  56          
+  57          //------------------------------------------------------------------------------------
+  58          // To update OBC revolution no using GDSN input
+  59          //------------------------------------------------------------------------------------
+  60          void groundUpdateRevNo (void)
+  61          {
+  62   1              //Set new orbit as directed by the GDSN
+  63   1              str_obdh_data.f_gs_reference_rev_no = uchar2float(g_uc_gsch_gs_arg[0],g_uc_gsch_gs_arg[1],g_uc_gsch_gs_ar
+             -g[2],g_uc_gsch_gs_arg[3]);
+  64   1      
+  65   1              //Take the integer part
+  66   1              str_obdh_data.us_gs_reference_rev_no = str_obdh_data.f_gs_reference_rev_no;
+  67   1      
+  68   1              //Take the non-integer part, make use of global multipurpose float variable
+  69   1              g_f = str_obdh_data.f_gs_reference_rev_no-(float)str_obdh_data.us_gs_reference_rev_no;
+  70   1      
+  71   1              //Multiply the non-integer part to integer in sec value (offset) to the revolution
+  72   1              g_f *= (float)str_obdh_par.us_rev_time_s;
+  73   1      
+  74   1              //Change auto orbit following the new referred orbit & set the orbiting time to zero again
+  75   1              //Add the non-integer part to the satellite revolution offset
+  76   1              str_obdh_data.us_auto_reference_rev_no = str_obdh_data.us_gs_reference_rev_no;
+  77   1              str_obdh_data.us_rev_offset_time = (unsigned short)g_f;
+  78   1      }
+  79          
+  80          //------------------------------------------------------------------------------------
+  81          // To listen to GDSN command and proceeds with the validation
+  82          //------------------------------------------------------------------------------------
+  83          void groundCommandListener (void)
+  84          {
+  85   1              #if (ISIS_CMD_ENABLE == 1)
+  86   1      
+  87   1              unsigned short l_us_comm_error_code = EC_INIT;
+  88   1              unsigned char l_uc_i = 0;
+  89   1      
+  90   1              //If the time to check the GDSN command has come, else, skips it
+  91   1              if (g_uc_gsch_flag & GSCH_FLAG_INITIAL_CHECK){
+  92   2                      //Complete initial validation checking, reset the checking flag
+  93   2                      g_uc_gsch_flag &= ~GSCH_FLAG_CHECK_RESET;
+  94   2      
+  95   2                      //Get IMC no of frame in the buffer every second (refer to global software timer)
+  96   2                      //Get AX.25 no of frame from COMM board
+  97   2                      l_us_comm_error_code = isisI2C(IMC_ADDR,IMC_I2C_GET_NOFR,0);                    
+  98   2              
+  99   2                      //If there is an error code, increase retry counter
+ 100   2                      //Else, reset it to zero
+ 101   2                      if (l_us_comm_error_code) 
+ 102   2                              g_uc_gsch_comm_retry_counter++;
+ 103   2                      else g_uc_gsch_comm_retry_counter = 0;
+ 104   2              
+ 105   2                      //If there is no error code and when we read the command,
+ 106   2                      //there is something in the ISIS board, check it
+ 107   2                      if (!l_us_comm_error_code && g_uc_i2c_data_in[0]){
+ 108   3                              //Do second-checking
+ 109   3                              for (l_uc_i = 0; l_uc_i < 1; l_uc_i++){
+ 110   4                                      l_us_comm_error_code = isisI2C(IMC_ADDR,IMC_I2C_GET_NOFR,0);
+ 111   4                                      if (l_us_comm_error_code) break;
+ 112   4                              }
+ 113   3      
+C51 COMPILER V9.02   LUXP_GROUND                                                           01/09/2014 12:21:18 PAGE 3   
+
+ 114   3                              //If it passes the second checking, then proceeds to read the command sent
+ 115   3                              if (!l_us_comm_error_code && g_uc_i2c_data_in[0]){
+ 116   4                                      insertGDSNCommandToGSCHVar();
+ 117   4                                      //Check if valid command is detected
+ 118   4                                      if (!g_us_gsch_command_validation_error_code){
+ 119   5                                              //Set flags for further checking the command
+ 120   5                                              g_uc_gsch_flag |= GSCH_FLAG_VALID_COMMAND;
+ 121   5      
+ 122   5                                              //Reset time elapsed since last communication with MCC time register
+ 123   5                                              g_ul_gsch_time_elapsed_since_last_communication_with_mcc = 0;
+ 124   5                                      }
+ 125   4                              }       
+ 126   3                      }                       
+ 127   2              }
+ 128   1              
+ 129   1              #endif
+ 130   1      }
+ 131          
+ 132          //------------------------------------------------------------------------------------
+ 133          // To generate groundpass request key
+ 134          //------------------------------------------------------------------------------------
+ 135          // Ian (2012-05-15): In the end, the request key generator uses complex method.
+ 136          void groundPassRequestKeyGenerator (void){
+ 137   1              #if (CRC_ENABLE == 1)
+ 138   1      
+ 139   1              unsigned char l_uc_array[8];
+ 140   1              unsigned short l_us_temp_crc16;
+ 141   1      
+ 142   1              #if (KEY_GENERATION_METHOD == COMPLEX_METHOD)
+ 143   1              //Record time & orbit info in the array
+ 144   1              fillData(l_uc_array,0,DATA_CAT_LATEST_TIME_AND_ORBIT_TAI_FORMAT,0);
+ 145   1      
+ 146   1              //Generate CRC16 based on current time and orbit info (key) 
+ 147   1              g_us_gsch_key = createChecksum (l_uc_array, 6, CHECKSUM_CRC16_TABLE);
+ 148   1      
+ 149   1              //To avoid zero key generated
+ 150   1              if (!g_us_gsch_key) g_us_gsch_key++;
+ 151   1      
+ 152   1              //Put the key to the array to generate the answer
+ 153   1              l_uc_array[0] = g_us_gsch_key >> 8;
+ 154   1              l_uc_array[1] = g_us_gsch_key;
+ 155   1      
+ 156   1              //Generate first CRC16 of the key (first answer)
+ 157   1              g_us_gsch_answer_1 = createChecksum (l_uc_array, 2, CHECKSUM_CRC16_TABLE);
+ 158   1      
+ 159   1              //Put the first CRC16 of the key to the array in preparation of generating answers
+ 160   1              l_uc_array[0] = g_us_gsch_answer_1 >> 8;
+ 161   1              l_uc_array[1] = g_us_gsch_answer_1;
+ 162   1      
+ 163   1              //Generate second CRC16 of the key
+ 164   1              l_us_temp_crc16 = createChecksum (l_uc_array, 2, CHECKSUM_CRC16_TABLE);
+ 165   1      
+ 166   1              //Put the second CRC16 of the key to the array in preparation of generating answers
+ 167   1              l_uc_array[0] = l_us_temp_crc16 >> 8;
+ 168   1              l_uc_array[1] = l_us_temp_crc16;
+ 169   1      
+ 170   1              //Generate third CRC16 of the key
+ 171   1              l_us_temp_crc16 = createChecksum (l_uc_array, 2, CHECKSUM_CRC16_TABLE);
+ 172   1      
+ 173   1              //Put the third CRC16 of the key to the array in preparation of generating answers
+ 174   1              l_uc_array[0] = l_us_temp_crc16 >> 8;
+ 175   1              l_uc_array[1] = l_us_temp_crc16;
+C51 COMPILER V9.02   LUXP_GROUND                                                           01/09/2014 12:21:18 PAGE 4   
+
+ 176   1      
+ 177   1              //Generate fourth CRC16 of the key (second answer)
+ 178   1              g_us_gsch_answer_2 = createChecksum (l_uc_array, 2, CHECKSUM_CRC16_TABLE);
+ 179   1      
+ 180   1              #elif (KEY_GENERATION_METHOD == SIMPLE_METHOD)
+                      //Take the last two bytes of the current time info as key
+                      g_us_gsch_key = str_obdh_data.ul_obc_time_s;
+              
+                      //To avoid zero key generated
+                      if (!g_us_gsch_key) g_us_gsch_key++;
+              
+                      //Put the key in the array
+                      l_uc_array[0] = g_us_gsch_key >> 8;
+                      l_uc_array[1] = g_us_gsch_key;
+              
+                      //Generate first CRC16 of the key (first answer)
+                      g_us_gsch_answer_1 = createChecksum (l_uc_array, 2, CHECKSUM_CRC16_TABLE);
+              
+                      //Put the first CRC16 of the key to the array in preparation of generating answers
+                      l_uc_array[0] = g_us_gsch_answer_1 >> 8;
+                      l_uc_array[1] = g_us_gsch_answer_1;
+              
+                      //Generate second CRC16 of the key
+                      l_us_temp_crc16 = createChecksum (l_uc_array, 2, CHECKSUM_CRC16_TABLE);
+              
+                      //Put the second CRC16 of the key to the array in preparation of generating answers
+                      l_uc_array[0] = l_us_temp_crc16 >> 8;
+                      l_uc_array[1] = l_us_temp_crc16;
+              
+                      //Generate third CRC16 of the key
+                      l_us_temp_crc16 = createChecksum (l_uc_array, 2, CHECKSUM_CRC16_TABLE);
+              
+                      //Put the third CRC16 of the key to the array in preparation of generating answers
+                      l_uc_array[0] = l_us_temp_crc16 >> 8;
+                      l_uc_array[1] = l_us_temp_crc16;
+              
+                      //Generate fourth CRC16 of the key (second answer)
+                      g_us_gsch_answer_2 = createChecksum (l_uc_array, 2, CHECKSUM_CRC16_TABLE);
+                      #endif
+ 215   1              
+ 216   1              #else
+                      //Take the last two bytes of the current time info as key
+                      g_us_gsch_key = str_obdh_data.ul_obc_time_s;
+              
+                      //To avoid zero key generated
+                      if (!g_us_gsch_key) g_us_gsch_key++;
+              
+                      //Create keys using simple methods
+                      g_us_gsch_answer_1 = ~g_us_gsch_key;
+                      g_us_gsch_answer_2 = g_us_gsch_key & 0xF0F0;
+              
+                      #endif
+ 228   1      }
+ 229          #endif
+ 230          #endif
+ 231          
+ 232          #if (SENDING_ENABLE == 1)
+ 233          #if (ISIS_CMD_ENABLE == 1)
+ 234          #if (BEACON_HANDLER_ENABLE == 1)
+ 235          //------------------------------------------------------------------------------------
+ 236          // To initialize CW beacon message, content, and rate under different modes
+ 237          //------------------------------------------------------------------------------------
+C51 COMPILER V9.02   LUXP_GROUND                                                           01/09/2014 12:21:18 PAGE 5   
+
+ 238          //      This function will be called in the beacon handler, whenever beacon handler is
+ 239          //      in the automatic mode, just before it wants to send CW beacon.
+ 240          //------------------------------------------------------------------------------------
+ 241          void groundInitCWBeacon (unsigned short l_us_cw_beacon_mode)
+ 242          {
+ 243   1              unsigned short l_us_batt_temp;
+ 244   1              unsigned short l_us_batt_v;
+ 245   1              unsigned char l_uc_i;
+ 246   1      
+ 247   1              //Set parameters for idle beacon 
+ 248   1              if (l_us_cw_beacon_mode == BEACON_FLAG_CW_MODE_M3)
+ 249   1                      //Set CW message length
+ 250   1                      g_uc_cw_message_length = CW_BEACON_LENGTH_M3;
+ 251   1              //Set parameters for NOP SH beacon
+ 252   1              else if (l_us_cw_beacon_mode == BEACON_FLAG_CW_MODE_M8)
+ 253   1                      //Set CW message length
+ 254   1                      g_uc_cw_message_length = CW_BEACON_LENGTH_M8;
+ 255   1              //Set parameters for LEOP SH beacon
+ 256   1              else if (l_us_cw_beacon_mode == BEACON_FLAG_CW_MODE_M4_M5_M7)
+ 257   1                      //Set CW message length
+ 258   1                      g_uc_cw_message_length = CW_BEACON_LENGTH_M4_M5_M7;
+ 259   1              //Set parameters for COMM ZONE beacon
+ 260   1              else if (l_us_cw_beacon_mode == BEACON_FLAG_CW_MODE_COMM_ZONE)
+ 261   1                      //Set CW message length
+ 262   1                      g_uc_cw_message_length = CW_BEACON_LENGTH_COMM_ZONE;
+ 263   1      
+ 264   1              //Ian (2012-05-15): the batteries are in series
+ 265   1              l_us_batt_temp = ((unsigned short)str_pwrs_hk.uc_batt_temp[0] + (unsigned short)str_pwrs_hk.uc_batt_temp[
+             -1])/2;
+ 266   1              l_us_batt_v = str_pwrs_hk.us_batt_v[0] + str_pwrs_hk.us_batt_v[1];
+ 267   1      
+ 268   1              //Set satellite mode
+ 269   1              //Satellite mode is initialized in luxp[version]_init.c file, it should not go uninitialized
+ 270   1              //Default case is added, nevertheless
+ 271   1              //Satellite mode M1 is impossible to occur, thus removed.
+ 272   1              //Ian (2012-05-15): it is noted that the lookup table is an alternative way of doing it.
+ 273   1              if              (str_obdh_hk.uc_sat_mode == SATELLITE_MODE_M2) g_uc_cw_message[6] = '2';
+ 274   1              else if (str_obdh_hk.uc_sat_mode == SATELLITE_MODE_M3) g_uc_cw_message[6] = 'G';
+ 275   1              else if (str_obdh_hk.uc_sat_mode == SATELLITE_MODE_M4) g_uc_cw_message[6] = '4';
+ 276   1              else if (str_obdh_hk.uc_sat_mode == SATELLITE_MODE_M5) g_uc_cw_message[6] = 'C';
+ 277   1              else if (str_obdh_hk.uc_sat_mode == SATELLITE_MODE_M6) g_uc_cw_message[6] = '6';
+ 278   1              else if (str_obdh_hk.uc_sat_mode == SATELLITE_MODE_M7) g_uc_cw_message[6] = 'Q';
+ 279   1              else if (str_obdh_hk.uc_sat_mode == SATELLITE_MODE_M8) g_uc_cw_message[6] = '8';
+ 280   1              else g_uc_cw_message[6] = '2';
+ 281   1      
+ 282   1              //Set SoC
+ 283   1              if              (str_pwrs_hk.uc_batt_soc < 25)                                                                  g_uc_cw_message[7] = 'D';
+ 284   1              else if (str_pwrs_hk.uc_batt_soc >= 25 && str_pwrs_hk.uc_batt_soc < 40) g_uc_cw_message[7] = 'F';
+ 285   1              else if (str_pwrs_hk.uc_batt_soc >= 40 && str_pwrs_hk.uc_batt_soc < 50) g_uc_cw_message[7] = '2';
+ 286   1              else if (str_pwrs_hk.uc_batt_soc >= 50 && str_pwrs_hk.uc_batt_soc < 55) g_uc_cw_message[7] = 'G';
+ 287   1              else if (str_pwrs_hk.uc_batt_soc >= 55 && str_pwrs_hk.uc_batt_soc < 60) g_uc_cw_message[7] = '4';
+ 288   1              else if (str_pwrs_hk.uc_batt_soc >= 60 && str_pwrs_hk.uc_batt_soc < 65) g_uc_cw_message[7] = 'C';
+ 289   1              else if (str_pwrs_hk.uc_batt_soc >= 65 && str_pwrs_hk.uc_batt_soc < 70) g_uc_cw_message[7] = '6';
+ 290   1              else if (str_pwrs_hk.uc_batt_soc >= 70 && str_pwrs_hk.uc_batt_soc < 80) g_uc_cw_message[7] = 'Q';
+ 291   1              else if (str_pwrs_hk.uc_batt_soc >= 80 && str_pwrs_hk.uc_batt_soc < 90) g_uc_cw_message[7] = '8';
+ 292   1              else if (str_pwrs_hk.uc_batt_soc >= 90)                                                                 g_uc_cw_message[7] = 'Z';
+ 293   1      
+ 294   1              //Set battery voltage
+ 295   1              if              (l_us_batt_v < 5000)                                            g_uc_cw_message[8] = 'D';
+ 296   1              else if (l_us_batt_v >= 5000 && l_us_batt_v < 6000)     g_uc_cw_message[8] = 'F';
+ 297   1              else if (l_us_batt_v >= 6000 && l_us_batt_v < 6500)     g_uc_cw_message[8] = '2';
+ 298   1              else if (l_us_batt_v >= 6500 && l_us_batt_v < 7000)     g_uc_cw_message[8] = 'G';
+C51 COMPILER V9.02   LUXP_GROUND                                                           01/09/2014 12:21:18 PAGE 6   
+
+ 299   1              else if (l_us_batt_v >= 7000 && l_us_batt_v < 7400)     g_uc_cw_message[8] = '4';
+ 300   1              else if (l_us_batt_v >= 7400 && l_us_batt_v < 7600)     g_uc_cw_message[8] = 'C';
+ 301   1              else if (l_us_batt_v >= 7600 && l_us_batt_v < 7800)     g_uc_cw_message[8] = '6';
+ 302   1              else if (l_us_batt_v >= 7800 && l_us_batt_v < 8000)     g_uc_cw_message[8] = 'Q';
+ 303   1              else if (l_us_batt_v >= 8000 && l_us_batt_v < 8200)     g_uc_cw_message[8] = '8';
+ 304   1              else if (l_us_batt_v >= 8200)                                           g_uc_cw_message[8] = 'Z';
+ 305   1      
+ 306   1              //Set ADCS sensor status
+ 307   1              if              ((str_adcs_hk.c_sensor_enable & 0x07) == 0x00)  g_uc_cw_message[9] = 'D';
+ 308   1              else if ((str_adcs_hk.c_sensor_enable & 0x07) == 0x01)  g_uc_cw_message[9] = 'F';
+ 309   1              else if ((str_adcs_hk.c_sensor_enable & 0x07) == 0x02)  g_uc_cw_message[9] = '2';
+ 310   1              else if ((str_adcs_hk.c_sensor_enable & 0x07) == 0x03)  g_uc_cw_message[9] = 'G';
+ 311   1              else if ((str_adcs_hk.c_sensor_enable & 0x07) == 0x04)  g_uc_cw_message[9] = '4';
+ 312   1              else if ((str_adcs_hk.c_sensor_enable & 0x07) == 0x05)  g_uc_cw_message[9] = 'C';
+ 313   1              else if ((str_adcs_hk.c_sensor_enable & 0x07) == 0x06)  g_uc_cw_message[9] = '6';
+ 314   1              else if ((str_adcs_hk.c_sensor_enable & 0x07) == 0x07)  g_uc_cw_message[9] = 'Q';
+ 315   1      
+ 316   1              //Full beacon set
+ 317   1              if (l_us_cw_beacon_mode == BEACON_FLAG_CW_MODE_M3 || l_us_cw_beacon_mode == BEACON_FLAG_CW_MODE_M4_M5_M7 
+             -|| l_us_cw_beacon_mode == BEACON_FLAG_CW_MODE_COMM_ZONE){
+ 318   2                      //Set battery temperature
+ 319   2                      if              (l_us_batt_temp < 30)                                                           g_uc_cw_message[10] = 'D';
+ 320   2                      else if (l_us_batt_temp >= 30   && l_us_batt_temp < 35)         g_uc_cw_message[10] = 'F';
+ 321   2                      else if (l_us_batt_temp >= 35   && l_us_batt_temp < 40)         g_uc_cw_message[10] = '2';
+ 322   2                      else if (l_us_batt_temp >= 40   && l_us_batt_temp < 45)         g_uc_cw_message[10] = 'G';
+ 323   2                      else if (l_us_batt_temp >= 45   && l_us_batt_temp < 50)         g_uc_cw_message[10] = '4';
+ 324   2                      else if (l_us_batt_temp >= 50   && l_us_batt_temp < 55)         g_uc_cw_message[10] = 'C';
+ 325   2                      else if (l_us_batt_temp >= 55   && l_us_batt_temp < 60)         g_uc_cw_message[10] = '6';
+ 326   2                      else if (l_us_batt_temp >= 60   && l_us_batt_temp < 65)         g_uc_cw_message[10] = 'Q';
+ 327   2                      else if (l_us_batt_temp >= 65   && l_us_batt_temp < 70)         g_uc_cw_message[10] = '8';
+ 328   2                      else if (l_us_batt_temp >= 70)                                                          g_uc_cw_message[10] = 'Z';
+ 329   2      
+ 330   2                      //Set ADCS MCU temperature
+ 331   2                      if              (str_adcs_hk.s_mcu_temp < -2000)                                                                                g_uc_cw_message[11] = 'D';
+ 332   2                      else if (str_adcs_hk.s_mcu_temp >= -2000        && str_adcs_hk.s_mcu_temp < -1000)      g_uc_cw_message[11] = 'F';
+ 333   2                      else if (str_adcs_hk.s_mcu_temp >= -1000        && str_adcs_hk.s_mcu_temp < 0)          g_uc_cw_message[11] = '2';
+ 334   2                      else if (str_adcs_hk.s_mcu_temp >= 0            && str_adcs_hk.s_mcu_temp < 1500)       g_uc_cw_message[11] = 'G';
+ 335   2                      else if (str_adcs_hk.s_mcu_temp >= 1500         && str_adcs_hk.s_mcu_temp < 3000)       g_uc_cw_message[11] = '4';
+ 336   2                      else if (str_adcs_hk.s_mcu_temp >= 3000         && str_adcs_hk.s_mcu_temp < 4500)       g_uc_cw_message[11] = 'C';
+ 337   2                      else if (str_adcs_hk.s_mcu_temp >= 4500         && str_adcs_hk.s_mcu_temp < 6000)       g_uc_cw_message[11] = '6';
+ 338   2                      else if (str_adcs_hk.s_mcu_temp >= 6000         && str_adcs_hk.s_mcu_temp < 7500)       g_uc_cw_message[11] = 'Q';
+ 339   2                      else if (str_adcs_hk.s_mcu_temp >= 7500         && str_adcs_hk.s_mcu_temp < 8500)       g_uc_cw_message[11] = '8';
+ 340   2                      else if (str_adcs_hk.s_mcu_temp >= 8500)                                                                                g_uc_cw_message[11] = 'Z';
+ 341   2      
+ 342   2                      //Set PWRS MCU temperature
+ 343   2                      if              (str_pwrs_hk.s_mcu_temp < -2000)                                                                                g_uc_cw_message[12] = 'D';
+ 344   2                      else if (str_pwrs_hk.s_mcu_temp >= -2000        && str_pwrs_hk.s_mcu_temp < -1000)      g_uc_cw_message[12] = 'F';
+ 345   2                      else if (str_pwrs_hk.s_mcu_temp >= -1000        && str_pwrs_hk.s_mcu_temp < 0)          g_uc_cw_message[12] = '2';
+ 346   2                      else if (str_pwrs_hk.s_mcu_temp >= 0            && str_pwrs_hk.s_mcu_temp < 1500)       g_uc_cw_message[12] = 'G';
+ 347   2                      else if (str_pwrs_hk.s_mcu_temp >= 1500         && str_pwrs_hk.s_mcu_temp < 3000)       g_uc_cw_message[12] = '4';
+ 348   2                      else if (str_pwrs_hk.s_mcu_temp >= 3000         && str_pwrs_hk.s_mcu_temp < 4500)       g_uc_cw_message[12] = 'C';
+ 349   2                      else if (str_pwrs_hk.s_mcu_temp >= 4500         && str_pwrs_hk.s_mcu_temp < 6000)       g_uc_cw_message[12] = '6';
+ 350   2                      else if (str_pwrs_hk.s_mcu_temp >= 6000         && str_pwrs_hk.s_mcu_temp < 7500)       g_uc_cw_message[12] = 'Q';
+ 351   2                      else if (str_pwrs_hk.s_mcu_temp >= 7500         && str_pwrs_hk.s_mcu_temp < 8500)       g_uc_cw_message[12] = '8';
+ 352   2                      else if (str_pwrs_hk.s_mcu_temp >= 8500)                                                                                g_uc_cw_message[12] = 'Z';
+ 353   2                      
+ 354   2                      //Set OBDH MCU temperature
+ 355   2                      if              (str_obdh_hk.s_mcu_temp < -2000)                                                                                g_uc_cw_message[13] = 'D';
+ 356   2                      else if (str_obdh_hk.s_mcu_temp >= -2000        && str_obdh_hk.s_mcu_temp < -1000)      g_uc_cw_message[13] = 'F';
+ 357   2                      else if (str_obdh_hk.s_mcu_temp >= -1000        && str_obdh_hk.s_mcu_temp < 0)          g_uc_cw_message[13] = '2';
+ 358   2                      else if (str_obdh_hk.s_mcu_temp >= 0            && str_obdh_hk.s_mcu_temp < 1500)       g_uc_cw_message[13] = 'G';
+ 359   2                      else if (str_obdh_hk.s_mcu_temp >= 1500         && str_obdh_hk.s_mcu_temp < 3000)       g_uc_cw_message[13] = '4';
+C51 COMPILER V9.02   LUXP_GROUND                                                           01/09/2014 12:21:18 PAGE 7   
+
+ 360   2                      else if (str_obdh_hk.s_mcu_temp >= 3000         && str_obdh_hk.s_mcu_temp < 4500)       g_uc_cw_message[13] = 'C';
+ 361   2                      else if (str_obdh_hk.s_mcu_temp >= 4500         && str_obdh_hk.s_mcu_temp < 6000)       g_uc_cw_message[13] = '6';
+ 362   2                      else if (str_obdh_hk.s_mcu_temp >= 6000         && str_obdh_hk.s_mcu_temp < 7500)       g_uc_cw_message[13] = 'Q';
+ 363   2                      else if (str_obdh_hk.s_mcu_temp >= 7500         && str_obdh_hk.s_mcu_temp < 8500)       g_uc_cw_message[13] = '8';
+ 364   2                      else if (str_obdh_hk.s_mcu_temp >= 8500)                                                                                g_uc_cw_message[13] = 'Z';
+ 365   2      
+ 366   2                      //Set solar panels temperature
+ 367   2                      for (l_uc_i = 0; l_uc_i < 5; l_uc_i++){
+ 368   3                              if              (str_pwrs_hk.uc_sp_temp[l_uc_i] < 20)                                                                                           g_uc_cw_message[l_uc_i+14] = 'D';
+ 369   3                              else if (str_pwrs_hk.uc_sp_temp[l_uc_i] >= 20   && str_pwrs_hk.uc_sp_temp[l_uc_i] < 40)         g_uc_cw_message
+             -[l_uc_i+14] = 'F';
+ 370   3                              else if (str_pwrs_hk.uc_sp_temp[l_uc_i] >= 40   && str_pwrs_hk.uc_sp_temp[l_uc_i] < 60)         g_uc_cw_message
+             -[l_uc_i+14] = '2';
+ 371   3                              else if (str_pwrs_hk.uc_sp_temp[l_uc_i] >= 60   && str_pwrs_hk.uc_sp_temp[l_uc_i] < 80)         g_uc_cw_message
+             -[l_uc_i+14] = 'G';
+ 372   3                              else if (str_pwrs_hk.uc_sp_temp[l_uc_i] >= 80   && str_pwrs_hk.uc_sp_temp[l_uc_i] < 100)        g_uc_cw_message
+             -[l_uc_i+14] = '4';
+ 373   3                              else if (str_pwrs_hk.uc_sp_temp[l_uc_i] >= 100  && str_pwrs_hk.uc_sp_temp[l_uc_i] < 120)        g_uc_cw_messag
+             -e[l_uc_i+14] = 'C';
+ 374   3                              else if (str_pwrs_hk.uc_sp_temp[l_uc_i] >= 120  && str_pwrs_hk.uc_sp_temp[l_uc_i] < 140)        g_uc_cw_messag
+             -e[l_uc_i+14] = '6';
+ 375   3                              else if (str_pwrs_hk.uc_sp_temp[l_uc_i] >= 140  && str_pwrs_hk.uc_sp_temp[l_uc_i] < 160)        g_uc_cw_messag
+             -e[l_uc_i+14] = 'Q';
+ 376   3                              else if (str_pwrs_hk.uc_sp_temp[l_uc_i] >= 160  && str_pwrs_hk.uc_sp_temp[l_uc_i] < 180)        g_uc_cw_messag
+             -e[l_uc_i+14] = '8';
+ 377   3                              else if (str_pwrs_hk.uc_sp_temp[l_uc_i] >= 180)                                                                                         g_uc_cw_message[l_uc_i+14] = 'Z';
+ 378   3                      }
+ 379   2              }
+ 380   1      }
+ 381          
+ 382          //------------------------------------------------------------------------------------
+ 383          // To initialize AX25 default beacon message, content, and rate
+ 384          //------------------------------------------------------------------------------------
+ 385          //      This function will be called in the beacon handler, whenever beacon handler is
+ 386          //      in the automatic mode, just before it wants to send AX25 beacon.
+ 387          //------------------------------------------------------------------------------------
+ 388          void groundInitAX25Beacon (void)
+ 389          {
+ 390   1              //Indicates taking data from temporary buffer
+ 391   1              g_uc_ax25_header_package_property = 0x00;
+ 392   1              
+ 393   1              //Taking the data initialization from the command argument
+ 394   1              g_uc_ax25_header_subsystem = OBDH_SUBSYSTEM;
+ 395   1              g_uc_ax25_header_data_type = SD_REAL_TIME;
+ 396   1      
+ 397   1              //Change beacon interval to 10 sec
+ 398   1              g_uc_beacon_interval = AX25_BEACON_INTERVAL_DEFAULT;
+ 399   1              
+ 400   1              //Initialized sending data (once only)
+ 401   1              g_us_beacon_init_ax25_error_code = initSendData();      
+ 402   1      }
+ 403          #endif
+ 404          #endif
+ 405          #endif
+ 406          
+ 407          #if (GROUND_STATION_COMMAND_HANDLER_ENABLE == 1)
+ 408          #if (SENDING_ENABLE == 1)
+ 409          #if (ISIS_CMD_ENABLE == 1)
+ 410          //------------------------------------------------------------------------------------
+ 411          // Common sequence to save schedule and send acknowledgement
+ 412          //------------------------------------------------------------------------------------
+ 413          void groundSaveScheduleAndAck (void)
+C51 COMPILER V9.02   LUXP_GROUND                                                           01/09/2014 12:21:18 PAGE 8   
+
+ 414          {
+ 415   1              #if (STORING_ENABLE == 1)
+ 416   1              #if (SAVE_STATE_ENABLE == 1)
+ 417   1              //Save the current schedule if the upload of a command is successful
+ 418   1              if (!g_us_gsch_error_code) saveDataProtected(OBDH_SUBSYSTEM, SD_SCHEDULE, g_uc_sd_data_buffer);
+ 419   1              #endif  
+ 420   1              #endif
+ 421   1      
+ 422   1              //Send ACK MSG
+ 423   1              sendAckMsg();
+ 424   1      }
+ 425          
+ 426          //------------------------------------------------------------------------------------
+ 427          // Common sequence to save essential data
+ 428          //------------------------------------------------------------------------------------
+ 429          void groundSaveEssentialAndAck (void)
+ 430          {
+ 431   1              #if (STORING_ENABLE == 1)
+ 432   1              #if (SAVE_STATE_ENABLE == 1)
+ 433   1              //Save the current schedule if the upload of a command is successful
+ 434   1              if(!g_us_gsch_error_code) saveDataProtected(ALL_SUBSYSTEMS, SD_ESSENTIAL, g_uc_sd_data_buffer);
+ 435   1              #endif  
+ 436   1              #endif
+ 437   1      
+ 438   1              //Send ACK MSG
+ 439   1              sendAckMsg();
+ 440   1      }
+ 441          #endif
+ 442          #endif
+ 443          
+ 444          //------------------------------------------------------------------------------------
+ 445          // Common sequence to terminate unsuccessful GSCH transitional state
+ 446          //------------------------------------------------------------------------------------
+ 447          void groundTerminateTransitionalState (void)
+ 448          {
+ 449   1              //Reset transitional flag and period
+ 450   1              g_uc_gsch_flag &= ~GSCH_FLAG_MONITOR_TRANSITIONAL;
+ 451   1              g_us_gsch_monitoring_transitional_period = 0;
+ 452   1              
+ 453   1              //Reset all GSCH request related flags
+ 454   1              str_obdh_hk.us_beacon_flag &= ~BEACON_FLAG_GSCH;
+ 455   1      }
+ 456          
+ 457          //------------------------------------------------------------------------------------
+ 458          // Common sequence to terminate GSCH groundpass
+ 459          //------------------------------------------------------------------------------------
+ 460          void groundTerminateGroundPass (void)
+ 461          {
+ 462   1              //Terminates transitional states
+ 463   1              groundTerminateTransitionalState();
+ 464   1      
+ 465   1              //Reset all groundpass-related variables
+ 466   1              resetGSCHCounters();
+ 467   1              g_uc_gsch_flag &= ~GSCH_FLAG_GROUNDPASS_STARTED;
+ 468   1              g_us_groundpass_time_register = 0;
+ 469   1      
+ 470   1              //Go back to idle state
+ 471   1              str_obdh_hk.uc_gsch_state = GSCH_STATE_IDLE;
+ 472   1      
+ 473   1              //If the current satellite mode is M6, go back to the previous mode,
+ 474   1              //Else, remain in the current mode
+ 475   1              if (str_obdh_hk.uc_sat_mode == SATELLITE_MODE_M6){
+C51 COMPILER V9.02   LUXP_GROUND                                                           01/09/2014 12:21:18 PAGE 9   
+
+ 476   2                      if (str_obdh_hk.uc_sat_mode >= SATELLITE_MODE_M5 && str_obdh_hk.uc_sat_mode <= SATELLITE_MODE_M8 && str_
+             -obdh_hk.uc_sat_mode != SATELLITE_MODE_M6)
+ 477   2                              str_obdh_hk.uc_sat_mode = str_obdh_data.uc_previous_mode;
+ 478   2                      else str_obdh_hk.uc_sat_mode = SATELLITE_MODE_M5;
+ 479   2              }
+ 480   1      
+ 481   1              //If there is still mission time register, enter M7
+ 482   1              if (g_us_mission_time_register) str_obdh_hk.uc_sat_mode = SATELLITE_MODE_M7;
+ 483   1      }
+ 484          
+ 485          #if (ISIS_CMD_ENABLE == 1)
+ 486          #if (SENDING_ENABLE == 1)
+ 487          //------------------------------------------------------------------------------------
+ 488          // Common sequence to terminate GSCH send real time data
+ 489          //------------------------------------------------------------------------------------
+ 490          void groundTerminateSendRealTimeData (void)
+ 491          {
+ 492   1              //Terminates transitional states
+ 493   1              groundTerminateTransitionalState();
+ 494   1      
+ 495   1              //Go back to GSCH_STATE_GROUND_PASS state
+ 496   1              str_obdh_hk.uc_gsch_state = GSCH_STATE_GROUND_PASS;
+ 497   1      }
+ 498          
+ 499          //------------------------------------------------------------------------------------
+ 500          // Common sequence to terminate GSCH send stored data
+ 501          //------------------------------------------------------------------------------------
+ 502          void groundTerminateSendStoredData (void)
+ 503          {
+ 504   1              //Terminates transitional states
+ 505   1              groundTerminateTransitionalState();
+ 506   1      
+ 507   1              //Reset recovery package block pointer
+ 508   1              str_bp.ul_package_recovery_write_p = SD_BP_PACKAGE_RECOVERY_START;
+ 509   1      
+ 510   1              //Go back to GSCH_STATE_GROUND_PASS state
+ 511   1              str_obdh_hk.uc_gsch_state = GSCH_STATE_GROUND_PASS;
+ 512   1      }
+ 513          
+ 514          //------------------------------------------------------------------------------------
+ 515          // Common sequence to terminate GSCH send stored data with acknowledgement message
+ 516          //------------------------------------------------------------------------------------
+ 517          void groundTerminateSendStoredDataWithAckMsg (void)
+ 518          {
+ 519   1              //Reset loading retry counter
+ 520   1              g_uc_gsch_loading_retry_counter = 0;
+ 521   1      
+ 522   1              //Send loading error to GDSN
+ 523   1              g_us_gsch_error_code = g_us_sd_load_error_code;
+ 524   1      
+ 525   1              //Reset recovery package block pointer
+ 526   1              str_bp.ul_package_recovery_write_p = SD_BP_PACKAGE_RECOVERY_START;
+ 527   1      
+ 528   1              //Send down ACK_MSG with error code
+ 529   1              sendAckMsg();
+ 530   1      }
+ 531          
+ 532          //------------------------------------------------------------------------------------
+ 533          // Common sequence for GSCH to start claiming beacon handler
+ 534          //------------------------------------------------------------------------------------
+ 535          void groundStartClaimBeacon (void)
+ 536          {
+C51 COMPILER V9.02   LUXP_GROUND                                                           01/09/2014 12:21:18 PAGE 10  
+
+ 537   1              //Set beacon flag to AX25 frame
+ 538   1              str_obdh_hk.us_beacon_flag &= ~BEACON_FLAG_GSCH_TYPE;
+ 539   1              
+ 540   1              //Starts to claim the beacon here to be used by GSCH (don't send anything automatically anymore)
+ 541   1              str_obdh_hk.us_beacon_flag |= BEACON_FLAG_GSCH_CLAIM;
+ 542   1              
+ 543   1              //Set transitional period flag
+ 544   1              g_uc_gsch_flag |= GSCH_FLAG_MONITOR_TRANSITIONAL;       
+ 545   1      
+ 546   1              #if (EVENT_HANDLER_ENABLE == 1)
+ 547   1              #if (STORING_ENABLE == 1)
+ 548   1              //dec22_yc .... track valid ground station cmd and processing status.
+ 549   1              eventHandler(EV_GSCH_MONITORING_TRANSITIONAL_FLAG_HANDLER,str_obdh_hk.uc_gsch_state,g_uc_gsch_gs_cmd_tail
+             -,
+ 550   1                                                      g_uc_gsch_gs_arg[0],g_uc_gsch_gs_arg[1],g_us_gsch_gs_cmd_crc>>16,g_us_gsch_gs_cmd_crc);
+ 551   1              #endif
+ 552   1              #endif                                                          
+ 553   1      }
+ 554          
+ 555          //------------------------------------------------------------------------------------
+ 556          // Common sequence to enter send real time data state
+ 557          //------------------------------------------------------------------------------------
+ 558          void groundEnterSendRealTime (void)
+ 559          {
+ 560   1              //Claim beaconHandler's use
+ 561   1              groundStartClaimBeacon();
+ 562   1      
+ 563   1              //Send the data
+ 564   1              str_obdh_hk.uc_gsch_state = GSCH_STATE_SEND_REAL_TIME_DATA;
+ 565   1      }
+ 566          
+ 567          //------------------------------------------------------------------------------------
+ 568          // Common sequence to enter send stored data state
+ 569          //------------------------------------------------------------------------------------
+ 570          void groundEnterSendStored (void)
+ 571          {
+ 572   1              //Claim beaconHandler's use
+ 573   1              groundStartClaimBeacon();
+ 574   1      
+ 575   1              //Send the data
+ 576   1              str_obdh_hk.uc_gsch_state = GSCH_STATE_SEND_STORED_DATA;
+ 577   1      }
+ 578          
+ 579          //------------------------------------------------------------------------------------
+ 580          // Common sequence to start send request (to the beacon handler)
+ 581          //------------------------------------------------------------------------------------
+ 582          void groundStartSendRequest (void)
+ 583          {
+ 584   1              //Reset transitional state monitoring period
+ 585   1              g_us_gsch_monitoring_transitional_period = 0;
+ 586   1      
+ 587   1              //Set beacon flag to AX25 frame
+ 588   1              str_obdh_hk.us_beacon_flag &= ~BEACON_FLAG_GSCH_TYPE;                                           
+ 589   1      
+ 590   1              //Set GSCH send request flag, beacon to send data next loop
+ 591   1              str_obdh_hk.us_beacon_flag |= BEACON_FLAG_GSCH_SEND_REQUEST;
+ 592   1      }
+ 593          
+ 594          //------------------------------------------------------------------------------------
+ 595          // Common sequence to keep send request (to the beacon handler)
+ 596          //------------------------------------------------------------------------------------
+ 597          void groundKeepSendRequest (void)
+C51 COMPILER V9.02   LUXP_GROUND                                                           01/09/2014 12:21:18 PAGE 11  
+
+ 598          {
+ 599   1              //Reset transitional state monitoring period
+ 600   1              g_us_gsch_monitoring_transitional_period = 0;
+ 601   1      
+ 602   1              //Clear the sending completed flag
+ 603   1              str_obdh_hk.us_beacon_flag &= ~BEACON_FLAG_GSCH_SEND_COMPLETED;
+ 604   1      
+ 605   1              //Set GSCH send request flag, beacon to send data in the next loop
+ 606   1              str_obdh_hk.us_beacon_flag |= BEACON_FLAG_GSCH_SEND_REQUEST;
+ 607   1      }
+ 608          
+ 609          //------------------------------------------------------------------------------------
+ 610          // Common sequence to terminate claiming beacon 
+ 611          //------------------------------------------------------------------------------------
+ 612          void groundReleaseClaimBeacon (void)
+ 613          {
+ 614   1              //Reset transitional state monitoring period
+ 615   1              g_us_gsch_monitoring_transitional_period = 0;
+ 616   1      
+ 617   1              //Clear the sending completed flag
+ 618   1              str_obdh_hk.us_beacon_flag &= ~BEACON_FLAG_GSCH_SEND_COMPLETED;
+ 619   1      
+ 620   1              //Release claim flag for now
+ 621   1              str_obdh_hk.us_beacon_flag &= ~BEACON_FLAG_GSCH_CLAIM;
+ 622   1      }
+ 623          #endif
+ 624          #endif
+ 625          
+ 626          #if (SATELLITE_MODE_HANDLER_ENABLE == 1)
+ 627          #if (OBDH_CMD_ENABLE == 1)
+ 628          //------------------------------------------------------------------------------------
+ 629          // Common sequence to enter mission mode
+ 630          //------------------------------------------------------------------------------------
+ 631          void groundEnterMissionMode (unsigned short l_us_elapsed_time_s)
+ 632          {
+ 633   1              #if (IDLE_MODE_HANDLER_ENABLE == 1)
+ 634   1              #if (PWRS_CMD_ENABLE == 1)
+ 635   1              //Disable IMH 
+ 636   1              str_obdh_hk.us_imh_flag &= ~IMH_FLAG_ENABLE;
+ 637   1              #endif
+ 638   1              #endif
+ 639   1      
+ 640   1              #if (BODY_RATE_HANDLER_ENABLE == 1)
+ 641   1              #if (ADCS_CMD_ENABLE == 1)
+ 642   1              #if (PWRS_CMD_ENABLE == 1)
+ 643   1              //Disable BRH
+ 644   1              str_obdh_hk.us_brh_flag &= ~BRH_FLAG_ENABLE;
+ 645   1      
+ 646   1              //Reset BRH end flags
+ 647   1              resetBRHEndFlags();
+ 648   1              #endif
+ 649   1              #endif
+ 650   1              #endif
+ 651   1      
+ 652   1              //Set mission mode time
+ 653   1              g_us_mission_time_register = l_us_elapsed_time_s;
+ 654   1      
+ 655   1              //Change satellite mode into mission mode
+ 656   1              str_obdh_hk.uc_sat_mode = SATELLITE_MODE_M7;
+ 657   1      }       
+ 658          #endif
+ 659          #endif
+C51 COMPILER V9.02   LUXP_GROUND                                                           01/09/2014 12:21:18 PAGE 12  
+
+ 660          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   2820    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----      13
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)

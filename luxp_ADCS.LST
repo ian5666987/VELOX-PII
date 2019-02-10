@@ -1,0 +1,558 @@
+C51 COMPILER V9.02   LUXP_ADCS                                                             01/09/2014 12:21:12 PAGE 1   
+
+
+C51 COMPILER V9.02, COMPILATION OF MODULE LUXP_ADCS
+NO OBJECT MODULE REQUESTED
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE luxp_ADCS.c LARGE OPTIMIZE(9,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+*** WARNING C500 IN LINE 1 OF LUXP_ADCS.C: LICENSE ERROR (R20D: CONTENT ERROR IN FLF FILE)
+
+   1          //------------------------------------------------------------------------------------
+   2          // Luxp_ADCS.c
+   3          //------------------------------------------------------------------------------------
+   4          // Copyright (C) 2013 Nanyang Technological University.
+   5          //
+   6          // AUTH: IAN
+   7          // DATE: 03 APR 2013
+   8          //
+   9          // The program Luxp_ADCS.c will be downloaded to the Pumpkin Motherboard with 
+  10          // C8051F120 uC as part of the VELOX-P Pico-Satellite Flight Software. 
+  11          //
+  12          // This file contains all functions related to communication with ADCS subsystem
+  13          //
+  14          //------------------------------------------------------------------------------------
+  15          // Overall functional test status
+  16          //------------------------------------------------------------------------------------
+  17          // Completely untested
+  18          //
+  19          //------------------------------------------------------------------------------------
+  20          // Overall documentation status
+  21          //------------------------------------------------------------------------------------
+  22          // Minimally documented
+  23          //------------------------------------------------------------------------------------
+  24          
+  25          //------------------------------------------------------------------------------------
+  26          // List of functions                            | Test status                                   | Documentation
+  27          //------------------------------------------------------------------------------------
+  28          //
+  29          //------------------------------------------------------------------------------------
+  30          
+  31          #include <luxp_ADCS.h>
+  32          
+  33          //------------------------------------------------------------------------------------
+  34          // ADCS Messaging Functions
+  35          //------------------------------------------------------------------------------------
+  36          
+  37          #if (ADCS_CMD_ENABLE == 1)
+  38          //------------------------------------------------------------------------------------
+  39          // ADCS I2C function (without input parameter)
+  40          //------------------------------------------------------------------------------------
+  41          // Function's test result: untested
+  42          //------------------------------------------------------------------------------------
+  43          unsigned short adcsI2C(unsigned char l_uc_msg_out, unsigned char l_uc_func_par)
+  44          {
+  45   1              unsigned short l_us_error_code = EC_INIT;
+  46   1      
+  47   1              #if (DEBUGGING_FEATURE == 1)
+  48   1              //To initialize time recording (if assigned)
+  49   1              if(l_uc_func_par & 0x01) startTiming();
+  50   1              #endif
+  51   1      
+  52   1              //To initialize and assign transmission parameters      
+  53   1              g_uc_i2c_msg_out                                = l_uc_msg_out;
+  54   1              g_uc_i2c_target                                 = ADCS_ADDR;
+C51 COMPILER V9.02   LUXP_ADCS                                                             01/09/2014 12:21:12 PAGE 2   
+
+  55   1              g_uc_i2c_transferred_byte_out   = 1;
+  56   1              g_uc_i2c_data_out[0]                    = g_uc_i2c_msg_out;
+  57   1      
+  58   1              switch (g_uc_i2c_msg_out){
+  59   2                      case ADCS_I2C_GET_HK:
+  60   2                              g_uc_i2c_transferred_byte_in = ADCS_I2C_GET_HK_RD;
+  61   2                              l_uc_func_par |= 0x0E;  //write, read, and store
+  62   2                              break;
+  63   2      
+  64   2                      case ADCS_I2C_GET_SSCP:
+  65   2                              g_uc_i2c_transferred_byte_in = ADCS_I2C_GET_SSCP_RD;
+  66   2                              l_uc_func_par |= 0x0E;  //write, read, and store
+  67   2                              break;
+  68   2      
+  69   2                      case ADCS_I2C_SET_STANDBY:
+  70   2                              g_uc_i2c_transferred_byte_in = ADCS_I2C_SET_STANDBY_RD;
+  71   2                              l_uc_func_par |= 0x06;  //write and read
+  72   2                              break;
+  73   2      
+  74   2                      case ADCS_I2C_SET_SELFTEST:
+  75   2                              g_uc_i2c_transferred_byte_in = ADCS_I2C_SET_SELFTEST_RD;                        
+  76   2                              l_uc_func_par |= 0x06;  //write and read
+  77   2                              break;
+  78   2      
+  79   2                      case ADCS_I2C_SET_GPS_ON:
+  80   2                      case ADCS_I2C_SET_GPS_OFF:
+  81   2                      case ADCS_I2C_RESET_SW:
+  82   2                      case ADCS_I2C_RESET_HW:
+  83   2                              l_uc_func_par |= 0x04;  //write
+  84   2                              break;
+  85   2      
+  86   2                      default:
+  87   2                              break;
+  88   2              }
+  89   1      
+  90   1              //If there is data out bit, transmit I2C command
+  91   1              if (l_uc_func_par & 0x04) 
+  92   1                      l_us_error_code = i2cWrite();
+  93   1      
+  94   1              //If there is data in bit, retrieve I2C data
+  95   1              if (l_uc_func_par & 0x02){
+  96   2                      if (l_us_error_code == EC_SUCCESSFUL)
+  97   2                              l_us_error_code = i2cWaitRead(TIME_DELAY_ADCS_I2C_CMD_WAITING_TENTH_MS,TIME_DELAY_ADCS_I2C_CMD_DELAY_TE
+             -NTH_MS);
+  98   2              }
+  99   1      
+ 100   1              //If there is store bit, store the I2C data.
+ 101   1              if (!l_us_error_code && (l_uc_func_par & 0x08)){
+ 102   2                      g_us_data_counter = 0;
+ 103   2                      storeADCS(g_uc_i2c_data_in);
+ 104   2              }
+ 105   1      
+ 106   1              #if (DEBUGGING_FEATURE == 1)
+ 107   1              //To end time recording
+ 108   1              if (l_uc_func_par & 0x01) endTiming();
+ 109   1              #endif
+ 110   1      
+ 111   1              return l_us_error_code;
+ 112   1      }
+ 113          
+ 114          //------------------------------------------------------------------------------------
+ 115          // Get single ADCS data
+C51 COMPILER V9.02   LUXP_ADCS                                                             01/09/2014 12:21:12 PAGE 3   
+
+ 116          //------------------------------------------------------------------------------------
+ 117          // Function's test result: untested
+ 118          //------------------------------------------------------------------------------------
+ 119          #if (DEBUGGING_FEATURE == 1)
+ 120          unsigned short adcsGetData (unsigned char l_uc_data_id, unsigned char l_uc_record_time_par)
+ 121          #else
+              unsigned short adcsGetData (unsigned char l_uc_data_id)
+              #endif
+ 124          {
+ 125   1              unsigned short l_us_error_code = EC_INIT;
+ 126   1      
+ 127   1              #if (DEBUGGING_FEATURE == 1)
+ 128   1              //To initialize time recording (if assigned)
+ 129   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 130   1              #endif
+ 131   1      
+ 132   1              //To initialize transmission parameters 
+ 133   1              g_uc_i2c_target = ADCS_ADDR;
+ 134   1              g_uc_i2c_msg_out = ADCS_I2C_GET_DATA;
+ 135   1              g_uc_i2c_transferred_byte_out = ADCS_I2C_GET_DATA_WR;
+ 136   1              g_uc_i2c_transferred_byte_in = ADCS_I2C_GET_DATA_RD;
+ 137   1      
+ 138   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 139   1              g_uc_i2c_data_out[1] = l_uc_data_id;
+ 140   1              
+ 141   1              //To transmit I2C command
+ 142   1              l_us_error_code = i2cWrite();
+ 143   1              
+ 144   1              //To receive I2C data
+ 145   1              if (l_us_error_code == EC_SUCCESSFUL)
+ 146   1                      l_us_error_code = i2cWaitRead(TIME_DELAY_ADCS_I2C_CMD_WAITING_TENTH_MS,TIME_DELAY_ADCS_I2C_CMD_DELAY_TEN
+             -TH_MS);
+ 147   1      
+ 148   1              #if (DEBUGGING_FEATURE == 1)
+ 149   1              //To end time recording
+ 150   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 151   1              #endif
+ 152   1      
+ 153   1              return l_us_error_code;
+ 154   1      }
+ 155          
+ 156          //------------------------------------------------------------------------------------
+ 157          // Set ADCS Mode
+ 158          //------------------------------------------------------------------------------------
+ 159          // Function's test result: untested
+ 160          //------------------------------------------------------------------------------------
+ 161          #if (DEBUGGING_FEATURE == 1)
+ 162          unsigned short adcsSetMode (unsigned char l_uc_acs_mode, unsigned short l_us_lapse_time_10s, unsigned char
+             - l_uc_record_time_par)
+ 163          #else
+              unsigned short adcsSetMode (unsigned char l_uc_acs_mode, unsigned short l_us_lapse_time_10s)
+              #endif
+ 166          {
+ 167   1              unsigned short l_us_error_code = EC_INIT;
+ 168   1      
+ 169   1              #if (DEBUGGING_FEATURE == 1)
+ 170   1              //To initialize time recording (if assigned)
+ 171   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 172   1              #endif
+ 173   1      
+ 174   1              //To initialize transmission parameters 
+ 175   1              g_uc_i2c_target = ADCS_ADDR;
+C51 COMPILER V9.02   LUXP_ADCS                                                             01/09/2014 12:21:12 PAGE 4   
+
+ 176   1              g_uc_i2c_msg_out = ADCS_I2C_SET_MODE;
+ 177   1              g_uc_i2c_transferred_byte_out = ADCS_I2C_SET_MODE_WR;
+ 178   1      
+ 179   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 180   1              g_uc_i2c_data_out[1] = l_uc_acs_mode;
+ 181   1              g_uc_i2c_data_out[2] = l_us_lapse_time_10s >> 8;
+ 182   1              g_uc_i2c_data_out[3] = l_us_lapse_time_10s;
+ 183   1              
+ 184   1              //To transmit I2C command
+ 185   1              l_us_error_code = i2cWrite();
+ 186   1              
+ 187   1              #if (DEBUGGING_FEATURE == 1)
+ 188   1              //To end time recording
+ 189   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 190   1              #endif
+ 191   1      
+ 192   1              return l_us_error_code;
+ 193   1      }
+ 194          
+ 195          //------------------------------------------------------------------------------------
+ 196          // Set ADCS sun sensor threshold
+ 197          //------------------------------------------------------------------------------------
+ 198          // Function's test result: untested
+ 199          //------------------------------------------------------------------------------------
+ 200          #if (DEBUGGING_FEATURE == 1)
+ 201          unsigned short adcsSetSSThreshold (short l_s_adcs_ss_threshold, unsigned char l_uc_record_time_par)
+ 202          #else
+              unsigned short adcsSetSSThreshold (short l_s_adcs_ss_threshold)
+              #endif
+ 205          {
+ 206   1              unsigned short l_us_error_code = EC_INIT;
+ 207   1      
+ 208   1              #if (DEBUGGING_FEATURE == 1)
+ 209   1              //To initialize time recording (if assigned)
+ 210   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 211   1              #endif
+ 212   1      
+ 213   1              //To initialize transmission parameters 
+ 214   1              g_uc_i2c_target = ADCS_ADDR;
+ 215   1              g_uc_i2c_msg_out = ADCS_I2C_SET_SS_THRESHOLD;
+ 216   1              g_uc_i2c_transferred_byte_out = ADCS_I2C_SET_SS_THRESHOLD_WR;
+ 217   1      
+ 218   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 219   1              g_uc_i2c_data_out[1] = l_s_adcs_ss_threshold >> 8;
+ 220   1              g_uc_i2c_data_out[2] = l_s_adcs_ss_threshold;
+ 221   1              
+ 222   1              //To transmit I2C command
+ 223   1              l_us_error_code = i2cWrite();
+ 224   1              
+ 225   1              #if (DEBUGGING_FEATURE == 1)
+ 226   1              //To end time recording
+ 227   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 228   1              #endif
+ 229   1      
+ 230   1              return l_us_error_code;
+ 231   1      }
+ 232          
+ 233          //------------------------------------------------------------------------------------
+ 234          // Set ADCS CGain
+ 235          //------------------------------------------------------------------------------------
+ 236          // Function's test result: untested
+ 237          //------------------------------------------------------------------------------------
+C51 COMPILER V9.02   LUXP_ADCS                                                             01/09/2014 12:21:12 PAGE 5   
+
+ 238          #if (DEBUGGING_FEATURE == 1)
+ 239          unsigned short adcsSetCGain (unsigned char l_uc_record_time_par)
+ 240          #else
+              unsigned short adcsSetCGain (void)
+              #endif
+ 243          {
+ 244   1              unsigned short l_us_error_code = EC_INIT;
+ 245   1              unsigned short l_us_i2c_size = 0;
+ 246   1              unsigned char l_uc_i;
+ 247   1      
+ 248   1              #if (DEBUGGING_FEATURE == 1)
+ 249   1              //To initialize time recording (if assigned)
+ 250   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 251   1              #endif
+ 252   1      
+ 253   1              //To initialize transmission parameters 
+ 254   1              g_uc_i2c_target = ADCS_ADDR;
+ 255   1              g_uc_i2c_msg_out = ADCS_I2C_SET_CGAIN;
+ 256   1              g_uc_i2c_transferred_byte_out = ADCS_I2C_SET_CGAIN_WR;
+ 257   1      
+ 258   1              g_uc_i2c_data_out[l_us_i2c_size++] = g_uc_i2c_msg_out;
+ 259   1              for (l_uc_i = 0; l_uc_i < NO_OF_ADCS_CGAIN; l_uc_i++)
+ 260   1                      l_us_i2c_size = insertFloatToArray(str_adcs_par.f_cgain[l_uc_i], &g_uc_i2c_data_out, l_us_i2c_size);
+ 261   1                              
+ 262   1              //To transmit I2C command
+ 263   1              l_us_error_code = i2cWrite();
+ 264   1              
+ 265   1              #if (DEBUGGING_FEATURE == 1)
+ 266   1              //To end time recording
+ 267   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 268   1              #endif
+ 269   1      
+ 270   1              return l_us_error_code;
+ 271   1      }
+ 272          
+ 273          //------------------------------------------------------------------------------------
+ 274          // Set ADCS TLE
+ 275          //------------------------------------------------------------------------------------
+ 276          // Function's test result: untested
+ 277          //------------------------------------------------------------------------------------
+ 278          #if (DEBUGGING_FEATURE == 1)
+ 279          unsigned short adcsSetTLE (unsigned char l_uc_record_time_par)
+ 280          #else
+              unsigned short adcsSetTLE (void)
+              #endif
+ 283          {
+ 284   1              unsigned short l_us_error_code = EC_INIT;
+ 285   1              unsigned short l_us_i2c_size = 0;
+ 286   1      
+ 287   1              #if (DEBUGGING_FEATURE == 1)
+ 288   1              //To initialize time recording (if assigned)
+ 289   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 290   1              #endif
+ 291   1      
+ 292   1              //To initialize transmission parameters 
+ 293   1              g_uc_i2c_target = ADCS_ADDR;
+ 294   1              g_uc_i2c_msg_out = ADCS_I2C_SET_TLE;
+ 295   1              g_uc_i2c_transferred_byte_out = ADCS_I2C_SET_TLE_WR;
+ 296   1      
+ 297   1              g_uc_i2c_data_out[l_us_i2c_size++] = g_uc_i2c_msg_out;
+ 298   1              l_us_i2c_size = insertFloatToArray(str_adcs_par.f_tle_epoch, &g_uc_i2c_data_out, l_us_i2c_size);
+ 299   1              l_us_i2c_size = insertFloatToArray(str_adcs_par.f_tle_inc, &g_uc_i2c_data_out, l_us_i2c_size);
+C51 COMPILER V9.02   LUXP_ADCS                                                             01/09/2014 12:21:12 PAGE 6   
+
+ 300   1              l_us_i2c_size = insertFloatToArray(str_adcs_par.f_tle_raan, &g_uc_i2c_data_out, l_us_i2c_size);
+ 301   1              l_us_i2c_size = insertFloatToArray(str_adcs_par.f_tle_arg_per, &g_uc_i2c_data_out, l_us_i2c_size);
+ 302   1              l_us_i2c_size = insertFloatToArray(str_adcs_par.f_tle_ecc, &g_uc_i2c_data_out, l_us_i2c_size);
+ 303   1              l_us_i2c_size = insertFloatToArray(str_adcs_par.f_tle_ma, &g_uc_i2c_data_out, l_us_i2c_size);
+ 304   1              l_us_i2c_size = insertShortToArray(str_adcs_par.us_tle_mm, &g_uc_i2c_data_out, l_us_i2c_size);
+ 305   1                              
+ 306   1              //To transmit I2C command
+ 307   1              l_us_error_code = i2cWrite();
+ 308   1              
+ 309   1              #if (DEBUGGING_FEATURE == 1)
+ 310   1              //To end time recording
+ 311   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 312   1              #endif
+ 313   1      
+ 314   1              return l_us_error_code;
+ 315   1      }
+ 316          
+ 317          //------------------------------------------------------------------------------------
+ 318          // Set ADCS Time
+ 319          //------------------------------------------------------------------------------------
+ 320          // Function's test result: untested
+ 321          //------------------------------------------------------------------------------------
+ 322          #if (DEBUGGING_FEATURE == 1)
+ 323          unsigned short adcsSetTime (unsigned long l_ul_time_from_tai, unsigned char l_uc_record_time_par)
+ 324          #else
+              unsigned short adcsSetTime (unsigned long l_ul_time_from_tai)
+              #endif
+ 327          {
+ 328   1              unsigned short l_us_error_code = EC_INIT;
+ 329   1      
+ 330   1              #if (DEBUGGING_FEATURE == 1)
+ 331   1              //To initialize time recording (if assigned)
+ 332   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 333   1              #endif
+ 334   1      
+ 335   1              //To initialize transmission parameters 
+ 336   1              g_uc_i2c_target = ADCS_ADDR;
+ 337   1              g_uc_i2c_msg_out = ADCS_I2C_SET_TIME;
+ 338   1              g_uc_i2c_transferred_byte_out = ADCS_I2C_SET_TIME_WR;
+ 339   1      
+ 340   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 341   1              g_uc_i2c_data_out[1] = l_ul_time_from_tai >> 24;
+ 342   1              g_uc_i2c_data_out[2] = l_ul_time_from_tai >> 16;
+ 343   1              g_uc_i2c_data_out[3] = l_ul_time_from_tai >> 8;
+ 344   1              g_uc_i2c_data_out[4] = l_ul_time_from_tai;
+ 345   1                              
+ 346   1              //To transmit I2C command
+ 347   1              l_us_error_code = i2cWrite();
+ 348   1              
+ 349   1              #if (DEBUGGING_FEATURE == 1)
+ 350   1              //To end time recording
+ 351   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 352   1              #endif
+ 353   1      
+ 354   1              return l_us_error_code;
+ 355   1      }
+ 356          
+ 357          //------------------------------------------------------------------------------------
+ 358          // Set ADCS vector align to sun
+ 359          //------------------------------------------------------------------------------------
+ 360          // Function's test result: untested
+ 361          //------------------------------------------------------------------------------------
+C51 COMPILER V9.02   LUXP_ADCS                                                             01/09/2014 12:21:12 PAGE 7   
+
+ 362          #if (DEBUGGING_FEATURE == 1)
+ 363          unsigned short adcsSetVectorAlignToSun (unsigned char l_uc_record_time_par)
+ 364          #else
+              unsigned short adcsSetVectorAlignToSun (void)
+              #endif
+ 367          {
+ 368   1              unsigned short l_us_error_code = EC_INIT;
+ 369   1      
+ 370   1              #if (DEBUGGING_FEATURE == 1)
+ 371   1              //To initialize time recording (if assigned)
+ 372   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 373   1              #endif
+ 374   1      
+ 375   1              //To initialize transmission parameters 
+ 376   1              g_uc_i2c_target = ADCS_ADDR;
+ 377   1              g_uc_i2c_msg_out = ADCS_I2C_SET_VECTOR_ALIGN2SUN;
+ 378   1              g_uc_i2c_transferred_byte_out = ADCS_I2C_SET_VECTOR_ALIGN2SUN_WR;
+ 379   1      
+ 380   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 381   1              g_uc_i2c_data_out[1] = str_adcs_par.s_vector_2sun[0] >> 8;
+ 382   1              g_uc_i2c_data_out[2] = str_adcs_par.s_vector_2sun[0];
+ 383   1              g_uc_i2c_data_out[3] = str_adcs_par.s_vector_2sun[1] >> 8;
+ 384   1              g_uc_i2c_data_out[4] = str_adcs_par.s_vector_2sun[1];
+ 385   1              g_uc_i2c_data_out[5] = str_adcs_par.s_vector_2sun[2] >> 8;
+ 386   1              g_uc_i2c_data_out[6] = str_adcs_par.s_vector_2sun[2];
+ 387   1                              
+ 388   1              //To transmit I2C command
+ 389   1              l_us_error_code = i2cWrite();
+ 390   1              
+ 391   1              #if (DEBUGGING_FEATURE == 1)
+ 392   1              //To end time recording
+ 393   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 394   1              #endif
+ 395   1      
+ 396   1              return l_us_error_code;
+ 397   1      }
+ 398          
+ 399          //------------------------------------------------------------------------------------
+ 400          // Set ADCS to toggle IMU
+ 401          //------------------------------------------------------------------------------------
+ 402          // Function's test result: untested
+ 403          //------------------------------------------------------------------------------------
+ 404          #if (DEBUGGING_FEATURE == 1)
+ 405          unsigned short adcsToggleIMU (char l_uc_imu, unsigned char l_uc_record_time_par)
+ 406          #else
+              unsigned short adcsToggleIMU (char l_uc_imu)
+              #endif
+ 409          {
+ 410   1              unsigned short l_us_error_code = EC_INIT;
+ 411   1      
+ 412   1              #if (DEBUGGING_FEATURE == 1)
+ 413   1              //To initialize time recording (if assigned)
+ 414   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 415   1              #endif
+ 416   1      
+ 417   1              //To initialize transmission parameters 
+ 418   1              g_uc_i2c_target = ADCS_ADDR;
+ 419   1              g_uc_i2c_msg_out = ADCS_I2C_SET_TOGGLE_IMU;
+ 420   1              g_uc_i2c_transferred_byte_out = ADCS_I2C_SET_TOGGLE_IMU_WR;
+ 421   1      
+ 422   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 423   1              g_uc_i2c_data_out[1] = l_uc_imu;
+C51 COMPILER V9.02   LUXP_ADCS                                                             01/09/2014 12:21:12 PAGE 8   
+
+ 424   1                              
+ 425   1              //To transmit I2C command
+ 426   1              l_us_error_code = i2cWrite();
+ 427   1              
+ 428   1              #if (DEBUGGING_FEATURE == 1)
+ 429   1              //To end time recording
+ 430   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 431   1              #endif
+ 432   1      
+ 433   1              return l_us_error_code;
+ 434   1      }
+ 435          
+ 436          //------------------------------------------------------------------------------------
+ 437          // Set ADCS body control rate
+ 438          //------------------------------------------------------------------------------------
+ 439          // Function's test result: untested
+ 440          //------------------------------------------------------------------------------------
+ 441          #if (DEBUGGING_FEATURE == 1)
+ 442          unsigned short adcsSetBodyRate (char l_uc_adcs_ctrl_br_x, char l_uc_adcs_ctrl_br_y, char l_uc_adcs_ctrl_br
+             -_z, unsigned char l_uc_record_time_par)
+ 443          #else
+              unsigned short adcsSetBodyRate (char l_uc_adcs_ctrl_br_x, char l_uc_adcs_ctrl_br_y, char l_uc_adcs_ctrl_br
+             -_z)
+              #endif
+ 446          {
+ 447   1              unsigned short l_us_error_code = EC_INIT;
+ 448   1      
+ 449   1              #if (DEBUGGING_FEATURE == 1)
+ 450   1              //To initialize time recording (if assigned)
+ 451   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 452   1              #endif
+ 453   1      
+ 454   1              //To initialize transmission parameters 
+ 455   1              g_uc_i2c_target = ADCS_ADDR;
+ 456   1              g_uc_i2c_msg_out = ADCS_I2C_SET_BODY_RATE;
+ 457   1              g_uc_i2c_transferred_byte_out = ADCS_I2C_SET_BODY_RATE_WR;
+ 458   1      
+ 459   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 460   1              g_uc_i2c_data_out[1] = l_uc_adcs_ctrl_br_x;
+ 461   1              g_uc_i2c_data_out[2] = l_uc_adcs_ctrl_br_y;
+ 462   1              g_uc_i2c_data_out[3] = l_uc_adcs_ctrl_br_z;
+ 463   1                              
+ 464   1              //To transmit I2C command
+ 465   1              l_us_error_code = i2cWrite();
+ 466   1              
+ 467   1              #if (DEBUGGING_FEATURE == 1)
+ 468   1              //To end time recording
+ 469   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 470   1              #endif
+ 471   1      
+ 472   1              return l_us_error_code;
+ 473   1      }
+ 474          
+ 475          //------------------------------------------------------------------------------------
+ 476          // Set ADCS body control rate
+ 477          //------------------------------------------------------------------------------------
+ 478          // Function's test result: untested
+ 479          //------------------------------------------------------------------------------------
+ 480          #if (DEBUGGING_FEATURE == 1)
+ 481          unsigned short adcsSetDGain (short l_s_adcs_dgain, unsigned char l_uc_record_time_par)
+ 482          #else
+              unsigned short adcsSetDGain (short l_s_adcs_dgain)
+C51 COMPILER V9.02   LUXP_ADCS                                                             01/09/2014 12:21:12 PAGE 9   
+
+              #endif
+ 485          {
+ 486   1              unsigned short l_us_error_code = EC_INIT;
+ 487   1      
+ 488   1              #if (DEBUGGING_FEATURE == 1)
+ 489   1              //To initialize time recording (if assigned)
+ 490   1              if(l_uc_record_time_par & 0x01) startTiming();
+ 491   1              #endif
+ 492   1      
+ 493   1              //To initialize transmission parameters 
+ 494   1              g_uc_i2c_target = ADCS_ADDR;
+ 495   1              g_uc_i2c_msg_out = ADCS_I2C_SET_DGAIN;
+ 496   1              g_uc_i2c_transferred_byte_out = ADCS_I2C_SET_DGAIN_WR;
+ 497   1      
+ 498   1              g_uc_i2c_data_out[0] = g_uc_i2c_msg_out;
+ 499   1              g_uc_i2c_data_out[1] = (l_s_adcs_dgain >> 8);
+ 500   1              g_uc_i2c_data_out[2] = l_s_adcs_dgain;
+ 501   1                              
+ 502   1              //To transmit I2C command
+ 503   1              l_us_error_code = i2cWrite();
+ 504   1              
+ 505   1              #if (DEBUGGING_FEATURE == 1)
+ 506   1              //To end time recording
+ 507   1              if (l_uc_record_time_par & 0x01) endTiming();
+ 508   1              #endif
+ 509   1      
+ 510   1              return l_us_error_code;
+ 511   1      }
+ 512          #endif
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1378    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----      55
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  1 WARNING(S),  0 ERROR(S)
